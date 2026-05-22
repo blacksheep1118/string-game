@@ -89,7 +89,7 @@ NODES = {
             "忽一日，一头筑基期妖兽闯入村子，村民危在旦夕！\n"
         ),
         "choices": [
-            {"text": "提剑正面迎战，守护村民", "next": "sword_fight"},
+            {"text": "提剑正面迎战，守护村民", "next": "sword_fight", "require": {"根骨": 25}, "fail": "sword_fight_injury"},
             {"text": "设伏引诱，智取妖兽", "next": "sword_tactic"},
         ],
     },
@@ -115,7 +115,7 @@ NODES = {
             "妖丹蕴含巨大力量，如何处置？\n"
         ),
         "choices": [
-            {"text": "冒险炼化妖丹，冲击筑基", "next": "absorb_core"},
+            {"text": "冒险炼化妖丹，冲击筑基", "next": "absorb_core", "require": {"根骨": 30}, "fail": "end_lose_power"},
             {"text": "献给师父，由他处置", "next": "give_core"},
         ],
     },
@@ -181,7 +181,7 @@ NODES = {
             "你选择炼制——\n"
         ),
         "choices": [
-            {"text": "筑基丹——提升修为的灵丹", "next": "pill_power"},
+            {"text": "筑基丹——提升修为的灵丹", "next": "pill_power", "require": {"悟性": 20}, "fail": "end_deviation"},
             {"text": "回春丹——救死扶伤的妙药", "next": "pill_heal"},
         ],
     },
@@ -236,7 +236,7 @@ NODES = {
             "「少年，你根骨奇佳，可愿入我玄天宗？」\n"
         ),
         "choices": [
-            {"text": "抓住机缘，拜入宗门", "next": "join_sect"},
+            {"text": "抓住机缘，拜入宗门", "next": "join_sect", "require": {"魅力": 20}, "fail": "go_home"},
             {"text": "挂念老母，婉拒长老", "next": "go_home"},
         ],
     },
@@ -249,7 +249,7 @@ NODES = {
             "石壁上刻满功法，中央悬浮着一颗幽蓝色的珠子。\n"
         ),
         "choices": [
-            {"text": "伸手触碰那颗珠子", "next": "woods_explore"},
+            {"text": "伸手触碰那颗珠子", "next": "woods_explore", "require": {"幸运": 25}, "fail": "woods_leave"},
             {"text": "记下功法后悄悄离开", "next": "woods_leave"},
         ],
     },
@@ -291,7 +291,7 @@ NODES = {
             "「你若助我脱困，我传你无上魔功！」\n"
         ),
         "choices": [
-            {"text": "助残魂脱困，换取力量", "next": "jade_trust"},
+            {"text": "助残魂脱困，换取力量", "next": "jade_trust", "require": {"精神": 25}, "fail": "end_possessed"},
             {"text": "用火焚烧古玉，彻底封印", "next": "jade_burn"},
         ],
     },
@@ -658,7 +658,7 @@ NODES = {
             "「你以杀证道，可曾后悔？」一个声音在雷声中回荡。\n"
         ),
         "choices": [
-            {"text": "「从不后悔！杀一是为罪，杀万即为雄！」", "next": "end_sword_god"},
+            {"text": "「从不后悔！杀一是为罪，杀万即为雄！」", "next": "end_sword_god", "require": {"根骨": 35}, "fail": "end_sword_hermit"},
             {"text": "「……或许，我错了。」放下杀剑", "next": "end_sword_hermit"},
         ],
     },
@@ -672,7 +672,7 @@ NODES = {
         ),
         "choices": [
             {"text": "接受魔道之力，堕入魔途", "next": "end_fallen"},
-            {"text": "宁死不屈，以残力守住道心", "next": "end_sword_redeem"},
+            {"text": "宁死不屈，以残力守住道心", "next": "end_sword_redeem", "require": {"精神": 30}, "fail": "end_fallen"},
         ],
     },
 
@@ -741,7 +741,7 @@ NODES = {
             "魔修终于不敌，跪地求饶：「饶我一命，我愿奉上毕生所学！」\n"
         ),
         "choices": [
-            {"text": "一剑斩杀，绝不留患", "next": "end_hero"},
+            {"text": "一剑斩杀，绝不留患", "next": "end_hero", "require": {"根骨": 28}, "fail": "end_martyr"},
             {"text": "犹豫了一瞬——被偷袭！同归于尽", "next": "end_martyr"},
         ],
     },
@@ -769,7 +769,7 @@ NODES = {
         ),
         "choices": [
             {"text": "继续丹道修行，稳步前行", "next": "end_solid"},
-            {"text": "将丹道与武道结合，开创新路", "next": "end_grandmaster"},
+            {"text": "将丹道与武道结合，开创新路", "next": "end_grandmaster", "require": {"悟性": 28}, "fail": "end_solid"},
         ],
     },
 
@@ -851,7 +851,7 @@ NODES = {
             "白眉道人已等你三年，见你来，抚须一笑：「不晚，刚刚好。」\n"
         ),
         "choices": [
-            {"text": "全力修炼，追赶失去的时间", "next": "end_late_bloom"},
+            {"text": "全力修炼，追赶失去的时间", "next": "end_late_bloom", "require": {"根骨": 25}, "fail": "end_humble_master"},
             {"text": "不急着突破，把基础打到最牢", "next": "end_humble_master"},
         ],
     },
@@ -891,7 +891,7 @@ NODES = {
             "但这股力量太过庞大，你的识海开始崩裂！\n"
         ),
         "choices": [
-            {"text": "全力接纳传承，死生由命", "next": "end_inheritance"},
+            {"text": "全力接纳传承，死生由命", "next": "end_inheritance", "require": {"精神": 30}, "fail": "end_possessed_ancient"},
             {"text": "中断传承，但已来不及——", "next": "end_possessed_ancient"},
         ],
     },
@@ -905,7 +905,7 @@ NODES = {
             "「禁制已启，非吾传人，不得擅动洞中宝物……」\n"
         ),
         "choices": [
-            {"text": "停下研读，将知识整理成册", "next": "end_scholar"},
+            {"text": "停下研读，将知识整理成册", "next": "end_scholar", "require": {"悟性": 25}, "fail": "end_trap_death"},
             {"text": "执意要取走那颗珠子", "next": "end_trap_death"},
         ],
     },
@@ -934,7 +934,7 @@ NODES = {
         ),
         "choices": [
             {"text": "反抗已无意义，被吞噬", "next": "end_possessed"},
-            {"text": "拼尽最后一丝意识，与天魔谈判", "next": "end_coexist"},
+            {"text": "拼尽最后一丝意识，与天魔谈判", "next": "end_coexist", "require": {"精神": 30}, "fail": "end_possessed"},
         ],
     },
 
@@ -963,7 +963,7 @@ NODES = {
         ),
         "choices": [
             {"text": "加入联盟，成为一方巨擘", "next": "end_merchant"},
-            {"text": "鲸吞三家，成为仙界首富", "next": "end_merchant_emperor"},
+            {"text": "鲸吞三家，成为仙界首富", "next": "end_merchant_emperor", "require": {"魅力": 28}, "fail": "end_merchant"},
         ],
     },
 
@@ -1359,6 +1359,21 @@ NODES = {
         ),
         "choices": [],
     },
+
+    # ---- 属性不足分支 ----
+    "sword_fight_injury": {
+        "title": "第四章 · 力不从心",
+        "text": (
+            "你提剑冲上，但根骨不足，难以驾驭剑气。\n"
+            "妖兽一爪拍来，你躲闪不及，被击飞数丈！\n\n"
+            "你躺在地上，浑身是血，意识渐渐模糊……\n"
+            "妖兽转身向村民冲去——你没有第二次机会了。\n"
+        ),
+        "choices": [
+            {"text": "燃烧精血，以命换命", "next": "end_martyr"},
+            {"text": "大声呼救，祈求师父相救", "next": "end_lose_power"},
+        ],
+    },
 }
 
 
@@ -1366,11 +1381,162 @@ NODES = {
 # 游戏引擎
 # ============================================================
 
+ATTR_NAMES = ["根骨", "幸运", "魅力", "精神", "悟性"]
+ATTR_MIN = 5
+ATTR_TOTAL = 100
+
+TRAITS = {
+    "1": {"name": "天生剑骨", "desc": "根骨+10，自幼筋骨异于常人", "bonus": {"根骨": 10}},
+    "2": {"name": "天命所归", "desc": "幸运+15，冥冥中有气运加身", "bonus": {"幸运": 15}},
+    "3": {"name": "龙凤之姿", "desc": "魅力+15，天生一副好皮囊", "bonus": {"魅力": 15}},
+    "4": {"name": "心如磐石", "desc": "精神+15，意志坚不可摧", "bonus": {"精神": 15}},
+    "5": {"name": "七窍玲珑", "desc": "悟性+15，一点即通举一反三", "bonus": {"悟性": 15}},
+    "6": {"name": "天道酬勤", "desc": "五项各+4，全面均衡发展", "bonus": {"根骨": 4, "幸运": 4, "魅力": 4, "精神": 4, "悟性": 4}},
+}
+
+
+def create_character(game):
+    """角色创建：分配属性 + 选择词条"""
+    game.clear_screen()
+    print()
+    game.print_separator("━")
+    print("  角色创建 · 分配属性")
+    game.print_separator("━")
+    print()
+    print(f"  你有 {ATTR_TOTAL} 点属性可自由分配，每项最低 {ATTR_MIN} 点。")
+    print()
+
+    attrs = {name: ATTR_MIN for name in ATTR_NAMES}
+    remaining = ATTR_TOTAL - ATTR_MIN * len(ATTR_NAMES)
+
+    while remaining > 0:
+        game.clear_screen()
+        game.print_separator("━")
+        print("  角色创建 · 分配属性")
+        game.print_separator("━")
+        print()
+        print(f"  {'属性':　<6} {'当前值':>4}   说明")
+        print(f"  {'──':　<6} {'───':>4}   ────────")
+        print(f"  根骨    {attrs['根骨']:>3}    影响战斗、体魄、肉身相关判定")
+        print(f"  幸运    {attrs['幸运']:>3}    影响机缘、寻宝、陷阱相关判定")
+        print(f"  魅力    {attrs['魅力']:>3}    影响社交、说服、交易相关判定")
+        print(f"  精神    {attrs['精神']:>3}    影响意志、抵抗心魔相关判定")
+        print(f"  悟性    {attrs['悟性']:>3}    影响学习、领悟功法相关判定")
+        print()
+        print(f"  剩余可分配点数: {remaining}")
+        print()
+        print("  输入属性名和点数（如: 根骨 10），或输入 q 完成")
+        print()
+
+        cmd = input("  > ").strip()
+        if cmd.lower() == "q":
+            if remaining > 0:
+                print(f"\n  还有 {remaining} 点未分配，确定完成吗？(y/n)")
+                if input("  > ").strip().lower() == "y":
+                    break
+            else:
+                break
+            continue
+
+        parts = cmd.split()
+        if len(parts) != 2:
+            print("  格式错误，请输入如: 根骨 10")
+            input("  按回车键继续...")
+            continue
+
+        name, val_str = parts[0], parts[1]
+        if name not in attrs:
+            print(f"  无效属性名，可选: {', '.join(ATTR_NAMES)}")
+            input("  按回车键继续...")
+            continue
+
+        try:
+            val = int(val_str)
+        except ValueError:
+            print("  点数必须为整数")
+            input("  按回车键继续...")
+            continue
+
+        if val < 0:
+            print("  点数不能为负数")
+            input("  按回车键继续...")
+            continue
+
+        if val > remaining:
+            print(f"  点数不足，你只剩 {remaining} 点")
+            input("  按回车键继续...")
+            continue
+
+        attrs[name] += val
+        remaining -= val
+
+    # 超过100上限的调整
+    total = sum(attrs.values())
+    if total > ATTR_TOTAL:
+        diff = total - ATTR_TOTAL
+        for name in reversed(ATTR_NAMES):
+            if diff <= 0:
+                break
+            excess = attrs[name] - ATTR_MIN
+            reduce_by = min(excess, diff)
+            attrs[name] -= reduce_by
+            diff -= reduce_by
+        remaining = 0
+
+    # ---- 选择词条 ----
+    while True:
+        game.clear_screen()
+        game.print_separator("━")
+        print("  角色创建 · 选择词条")
+        game.print_separator("━")
+        print()
+        print("  请选择一个初始词条（加成词条）：")
+        print()
+        for key in sorted(TRAITS.keys(), key=int):
+            t = TRAITS[key]
+            bonus_str = "、".join(f"{k}+{v}" for k, v in t["bonus"].items())
+            print(f"  [{key}] {t['name']} — {bonus_str}")
+            print(f"      {t['desc']}")
+            print()
+        print("  输入编号 (1-6):")
+        print()
+
+        choice = input("  > ").strip()
+        if choice in TRAITS:
+            selected = TRAITS[choice]
+            game.trait = selected["name"]
+            for name, bonus in selected["bonus"].items():
+                attrs[name] += bonus
+            break
+        print("  无效选择，请输入 1-6。")
+        input("  按回车键继续...")
+
+    game.attrs = attrs
+
+    # 显示最终属性
+    game.clear_screen()
+    game.print_separator("━")
+    print("  角色创建完成！")
+    game.print_separator("━")
+    print()
+    print(f"  角色: {game.player_name}")
+    print(f"  词条: {game.trait}")
+    print()
+    print(f"  最终属性：")
+    for name in ATTR_NAMES:
+        bar = "█" * (game.attrs[name] // 5) + "░" * (8 - game.attrs[name] // 5)
+        print(f"    {name:<4} {game.attrs[name]:>3}  {bar}")
+    print()
+    input("  按回车键开始游戏...")
+
+
 class Game:
     def __init__(self):
         self.current_node = "start"
         self.player_name = ""
         self.path_history = []
+        self.attrs = {name: 20 for name in ATTR_NAMES}
+        self.trait = ""
 
     def clear_screen(self):
         os.system("cls" if os.name == "nt" else "clear")
@@ -1389,13 +1555,11 @@ class Game:
         self.clear_screen()
         node = NODES[self.current_node]
         self.print_title(node["title"])
-        # 用 typing effect 分段打印正文
         for line in node["text"].strip().split("\n"):
             print(f"  {line}")
         print()
 
         if not node["choices"]:
-            # 结局节点
             self.print_separator()
             print()
             print("  请输入:")
@@ -1403,20 +1567,42 @@ class Game:
             print("    2. 返回主菜单")
             print("    3. 退出游戏")
             print()
-            return True  # is_ending
-        else:
-            for i, choice in enumerate(node["choices"], 1):
-                print(f"  [{i}] {choice['text']}")
-            print()
-            print("  输入 1 或 2 做出选择，输入 s 保存进度")
-            print()
-            return False  # not ending
+            return True
+
+        for i, choice in enumerate(node["choices"], 1):
+            tag = ""
+            req = choice.get("require", {})
+            if req:
+                met = all(self.attrs.get(k, 0) >= v for k, v in req.items())
+                req_str = "、".join(f"{k}>={v}" for k, v in req.items())
+                if met:
+                    tag = f"  [需{req_str} ✓]"
+                else:
+                    tag = f"  [需{req_str} ✗]"
+            print(f"  [{i}] {choice['text']}{tag}")
+        print()
+
+        # 显示当前属性
+        attr_line = " | ".join(f"{n}:{self.attrs[n]}" for n in ATTR_NAMES)
+        print(f"  {attr_line}")
+        print()
+        print("  输入 1 或 2 做出选择，输入 s 保存进度")
+        print()
+        return False
 
     def make_choice(self, choice_idx):
         node = NODES[self.current_node]
         if 0 <= choice_idx < len(node["choices"]):
+            choice = node["choices"][choice_idx]
             self.path_history.append(self.current_node)
-            self.current_node = node["choices"][choice_idx]["next"]
+
+            req = choice.get("require", {})
+            if req:
+                met = all(self.attrs.get(k, 0) >= v for k, v in req.items())
+                if not met and "fail" in choice:
+                    self.current_node = choice["fail"]
+                    return
+            self.current_node = choice["next"]
 
     def save_game(self):
         if not os.path.exists(SAVE_DIR):
@@ -1426,6 +1612,8 @@ class Game:
             "player_name": self.player_name,
             "current_node": self.current_node,
             "path_history": self.path_history,
+            "attrs": self.attrs,
+            "trait": self.trait,
             "title": NODES[self.current_node]["title"],
             "saved_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         }
@@ -1443,6 +1631,8 @@ class Game:
         self.player_name = data["player_name"]
         self.current_node = data["current_node"]
         self.path_history = data["path_history"]
+        self.attrs = data.get("attrs", {name: 20 for name in ATTR_NAMES})
+        self.trait = data.get("trait", "")
         return data
 
     @staticmethod
@@ -1500,6 +1690,7 @@ def main_menu():
             game.clear_screen()
             name = input("  请输入你的角色名（直接回车为「叶尘」）: ").strip()
             game.player_name = name if name else "叶尘"
+            create_character(game)
             return "new", game
 
         elif choice == "2" and saves:
