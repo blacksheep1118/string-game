@@ -146,12 +146,20 @@ def api_save():
         "saved_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }
 
-    filename = f"save_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-    filepath = os.path.join(SAVE_DIR, filename)
+    # 如果指定了 overwrite 文件名，覆盖该文件（不更新时间戳后缀）
+    overwrite = data.get("overwrite", "")
+    if overwrite:
+        filepath = os.path.join(SAVE_DIR, overwrite)
+    else:
+        ts = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
+        filename = f"save_{ts}.json"
+        filepath = os.path.join(SAVE_DIR, filename)
+
     with open(filepath, "w", encoding="utf-8") as f:
         json.dump(save_data, f, ensure_ascii=False, indent=2)
 
-    return jsonify({"ok": True, "filename": filename, "saved_at": save_data["saved_at"]})
+    basename = os.path.basename(filepath)
+    return jsonify({"ok": True, "filename": basename, "saved_at": save_data["saved_at"]})
 
 
 @app.route("/api/saves", methods=["GET"])
@@ -205,12 +213,21 @@ def api_load():
 def api_restart():
     data = request.get_json() or {}
     sid = data.get("session_id", "default")
-    g = games.get(sid)
-    if not g:
-        return jsonify({"error": "no game"}), 400
-    g.current_node = "start"
-    g.path_history = []
-    return jsonify(get_node_data(g))
+    # 完全重置游戏状态，回到命名阶段
+    if sid in games:
+        del games[sid]
+    return jsonify({"state": "restart"})
+
+
+@app.route("/api/delete_save", methods=["POST"])
+def api_delete_save():
+    data = request.get_json() or {}
+    filename = data.get("filename", "")
+    filepath = os.path.join(SAVE_DIR, filename)
+    if os.path.exists(filepath):
+        os.remove(filepath)
+        return jsonify({"ok": True})
+    return jsonify({"error": "存档不存在"}), 400
 
 
 def get_node_data(g: Game) -> dict:

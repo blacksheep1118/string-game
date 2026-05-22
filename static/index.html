@@ -383,11 +383,40 @@ function renderText(text) {
   return text.replace(/\n/g, '<br>');
 }
 
+// 自动存档 — 章节切换时覆盖同一文件
+let lastChapter = '';
+let autoSaveFile = '';  // 本次游玩的自动存档文件名
+
+function getChapter(title) {
+  const m = title.match(/^(第[〇一二三四五六七八九十终]+章)/);
+  return m ? m[1] : title;
+}
+
+function resetAutoSave() {
+  autoSaveFile = '';
+  lastChapter = '';
+}
+
+async function autoSaveOnChapter(data) {
+  const chapter = getChapter(data.title);
+  if (chapter && chapter !== lastChapter && lastChapter !== '') {
+    // 首次自动存档创建新文件，后续覆盖同一文件
+    const payload = autoSaveFile ? { overwrite: autoSaveFile } : {};
+    const r = await api('/api/save', payload);
+    if (!autoSaveFile && r.filename) autoSaveFile = r.filename;
+    toast('已自动存档 (' + chapter + ')');
+  }
+  if (chapter) lastChapter = chapter;
+}
+
 // 显示节点
 function renderNode(data) {
   currentNode = data;
   isEnding = data.is_ending;
   const content = document.getElementById('content');
+
+  // 章节切换时自动存档（静默，后台完成）
+  autoSaveOnChapter(data);
 
   let html = `<div class="fade-in">`;
   html += `<div class="chapter-title">${data.title}</div>`;
@@ -438,10 +467,15 @@ async function showLoadModal() {
     html += '<p style="text-align:center;color:var(--text-dim)">暂无存档</p>';
   } else {
     saves.forEach(s => {
-      html += `<button class="trait-option" onclick="loadGame('${s.filename}')">
-        ${s.name} — ${s.title}<br>
-        <small style="color:var(--text-dim)">${s.saved_at}</small>
-      </button>`;
+      html += `<div style="display:flex;gap:8px;align-items:center;margin:6px 0">
+        <button class="trait-option" style="flex:1;margin:0" onclick="loadGame('${s.filename}')">
+          ${s.name} — ${s.title}<br>
+          <small style="color:var(--text-dim)">${s.saved_at}</small>
+        </button>
+        <button class="action-btn" style="padding:6px 10px;flex-shrink:0"
+          onclick="event.stopPropagation();deleteSave('${s.filename}')"
+          title="删除存档">✕</button>
+      </div>`;
     });
   }
 
@@ -453,15 +487,28 @@ async function showLoadModal() {
 // 加载存档
 async function loadGame(filename) {
   document.querySelectorAll('.modal-overlay').forEach(m => m.remove());
+  resetAutoSave();
   const data = await api('/api/load', { filename });
   renderNode(data);
-  toast('✓ 存档已加载');
+  toast('存档已加载');
 }
 
-// 重新开始
+// 删除存档
+async function deleteSave(filename) {
+  if (!confirm('确定要删除这个存档吗？此操作不可恢复。')) return;
+  await api('/api/delete_save', { filename });
+  document.querySelectorAll('.modal-overlay').forEach(m => m.remove());
+  showLoadModal();
+  toast('存档已删除');
+}
+
+// 重新开始 — 回到命名阶段
 async function restartGame() {
-  const data = await api('/api/restart');
-  renderNode(data);
+  resetAutoSave();
+  await api('/api/restart');
+  document.getElementById('attrs-panel').innerHTML = '';
+  document.getElementById('actions').innerHTML = '';
+  showNewGameDialog();
   toast('已重新开始');
 }
 
@@ -492,6 +539,7 @@ async function showMainMenu() {
 }
 
 async function showNewGameDialog() {
+  resetAutoSave();
   const content = document.getElementById('content');
   content.innerHTML = `
     <div class="fade-in" style="text-align:center">
@@ -519,53 +567,76 @@ async function initNewGame() {
   let attrs = { 根骨: min, 幸运: min, 魅力: min, 精神: min, 悟性: min };
   let remaining = total - Object.keys(attrs).length * min;
 
-  function renderAttrUI() {
-    content.innerHTML = `
-      <div class="fade-in">
-        <div class="chapter-title">分配属性</div>
-        <div id="remaining-points">剩余点数: <strong>${remaining}</strong></div>
-        ${Object.entries(attrs).map(([k, v]) => `
-          <div class="attr-input-group">
-            <label>${k}</label>
-            <button onclick="window._adjAttr('${k}', -1)" style="padding:4px 8px;font-family:inherit;background:rgba(0,0,0,0.4);color:var(--text);border:1px solid var(--border);border-radius:3px;cursor:pointer">-</button>
-            <input type="number" value="${v}" min="${min}" max="${v + remaining}" id="attr-${k}"
-              onchange="window._setAttr('${k}', parseInt(this.value))">
-            <button onclick="window._adjAttr('${k}', 1)" style="padding:4px 8px;font-family:inherit;background:rgba(0,0,0,0.4);color:var(--text);border:1px solid var(--border);border-radius:3px;cursor:pointer">+</button>
-            <span class="attr-hint">${{根骨:'战斗·肉身',幸运:'机缘·寻宝',魅力:'社交·交易',精神:'意志·心魔',悟性:'学习·功法'}[k]}</span>
-          </div>
-        `).join('')}
-        <button class="choice-btn" style="max-width:200px;margin:20px auto;display:block"
-          onclick="window._confirmAttrs()">
-          <span class="idx">→</span>确认属性
-        </button>
-      </div>`;
+  const hints = { 根骨: '战斗·肉身', 幸运: '机缘·寻宝', 魅力: '社交·交易', 精神: '意志·心魔', 悟性: '学习·功法' };
 
-    window._adjAttr = function(k, delta) {
-      const newVal = attrs[k] + delta;
-      if (newVal < min || delta > remaining) return;
-      attrs[k] = newVal;
-      remaining -= delta;
-      renderAttrUI();
-    };
-    window._setAttr = function(k, val) {
-      if (isNaN(val)) return;
-      const old = attrs[k];
-      const diff = val - old;
-      if (val < min || diff > remaining + old - old) return;
-      const actual = Math.max(min, Math.min(old + remaining, val));
-      remaining -= (actual - old);
-      attrs[k] = actual;
-      renderAttrUI();
-    };
-    window._confirmAttrs = function() {
-      if (remaining > 0) {
-        if (!confirm(`还有 ${remaining} 点未分配，确定继续？`)) return;
-      }
-      showTraitSelection(attrs);
-    };
+  // 只渲染一次骨架
+  let rows = Object.keys(attrs).map(k => `
+    <div class="attr-input-group">
+      <label>${k}</label>
+      <button class="attr-minus" data-key="${k}">−</button>
+      <input type="number" id="attr-${k}" value="${min}" min="${min}" max="${min + remaining}">
+      <button class="attr-plus" data-key="${k}">+</button>
+      <span class="attr-hint">${hints[k]}</span>
+    </div>
+  `).join('');
+
+  content.innerHTML = `
+    <div class="fade-in">
+      <div class="chapter-title">分配属性</div>
+      <div id="remaining-points">剩余点数: <strong>${remaining}</strong></div>
+      ${rows}
+      <button class="choice-btn" style="max-width:200px;margin:20px auto;display:block" id="confirm-attrs-btn">
+        <span class="idx">→</span>确认属性
+      </button>
+    </div>`;
+
+  // 直接 DOM 更新，无闪烁
+  const remainingEl = document.getElementById('remaining-points');
+
+  function updateUI(key) {
+    document.getElementById(`attr-${key}`).value = attrs[key];
+    remainingEl.innerHTML = `剩余点数: <strong>${remaining}</strong>`;
   }
 
-  renderAttrUI();
+  // 绑定事件（不重渲染）
+  content.querySelectorAll('.attr-plus').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.key;
+      if (remaining <= 0) return;
+      attrs[key]++; remaining--;
+      updateUI(key);
+    });
+  });
+
+  content.querySelectorAll('.attr-minus').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.key;
+      if (attrs[key] <= min) return;
+      attrs[key]--; remaining++;
+      updateUI(key);
+    });
+  });
+
+  content.querySelectorAll('input[type=number]').forEach(input => {
+    input.addEventListener('change', () => {
+      const key = input.id.replace('attr-', '');
+      let val = parseInt(input.value);
+      if (isNaN(val)) { input.value = attrs[key]; return; }
+      const diff = val - attrs[key];
+      if (diff > remaining) val = attrs[key] + remaining;
+      if (val < min) val = min;
+      remaining -= (val - attrs[key]);
+      attrs[key] = val;
+      updateUI(key);
+    });
+  });
+
+  document.getElementById('confirm-attrs-btn').addEventListener('click', () => {
+    if (remaining > 0) {
+      if (!confirm(`还有 ${remaining} 点未分配，确定继续？`)) return;
+    }
+    showTraitSelection(attrs);
+  });
 }
 
 function showTraitSelection(attrs) {
@@ -581,34 +652,34 @@ function showTraitSelection(attrs) {
     '6': { name: '天道酬勤', desc: '五项各+4，全面均衡发展', bonus: '五项各+4' },
   };
 
-  function renderTraitUI() {
-    content.innerHTML = `
-      <div class="fade-in">
-        <div class="chapter-title">选择词条</div>
-        ${Object.entries(traits).map(([k, t]) => `
-          <button class="trait-option${k === selectedTrait ? ' selected' : ''}"
-            onclick="window._selectTrait('${k}')">
-            <strong>${t.name}</strong> — ${t.bonus}<br>
-            <small style="color:var(--text-dim)">${t.desc}</small>
-          </button>
-        `).join('')}
-        <button class="choice-btn" style="max-width:200px;margin:20px auto;display:block"
-          onclick="window._confirmTrait()">
-          <span class="idx">→</span>开始游戏
+  // 只渲染一次，点击只切换选中样式
+  content.innerHTML = `
+    <div class="fade-in">
+      <div class="chapter-title">选择词条</div>
+      ${Object.entries(traits).map(([k, t]) => `
+        <button class="trait-option${k === selectedTrait ? ' selected' : ''}" id="trait-${k}" data-trait="${k}">
+          <strong>${t.name}</strong> — ${t.bonus}<br>
+          <small style="color:var(--text-dim)">${t.desc}</small>
         </button>
-      </div>`;
+      `).join('')}
+      <button class="choice-btn" style="max-width:200px;margin:20px auto;display:block" id="confirm-trait-btn">
+        <span class="idx">→</span>开始游戏
+      </button>
+    </div>`;
 
-    window._selectTrait = function(k) {
-      selectedTrait = k;
-      renderTraitUI();
-    };
-    window._confirmTrait = async function() {
-      const data = await api('/api/set_attrs', { attrs, trait: selectedTrait });
-      renderNode(data);
-    };
-  }
+  // 点击词条：只切换 CSS class，不重渲染
+  content.querySelectorAll('.trait-option').forEach(btn => {
+    btn.addEventListener('click', () => {
+      content.querySelectorAll('.trait-option').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedTrait = btn.dataset.trait;
+    });
+  });
 
-  renderTraitUI();
+  document.getElementById('confirm-trait-btn').addEventListener('click', async () => {
+    const data = await api('/api/set_attrs', { attrs, trait: selectedTrait });
+    renderNode(data);
+  });
 }
 
 // ============================================================
