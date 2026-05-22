@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>仙途 · 文字修仙</title>
+<style>
+/* ============================================================
+   水墨风修仙游戏 — 前端样式
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&display=swap');
+
+:root {
+  --bg: #1a1410;
+  --panel: #2a2218;
+  --gold: #c9a96e;
+  --gold-light: #e0c88a;
+  --text: #d4c5a9;
+  --text-dim: #8a7b65;
+  --accent: #a0522d;
+  --jade: #6b8e6b;
+  --danger: #8b3a3a;
+  --border: #3a3020;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Noto Serif SC', 'SimSun', 'STSong', serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  background-image:
+    radial-gradient(ellipse at 20% 50%, rgba(201,169,110,0.05) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(107,142,107,0.04) 0%, transparent 40%),
+    radial-gradient(ellipse at 50% 80%, rgba(160,82,45,0.04) 0%, transparent 40%);
+}
+
+/* 粒子背景 */
+#particles {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none; z-index: 0;
+}
+.particle {
+  position: absolute;
+  color: rgba(201,169,110,0.3);
+  font-size: 20px;
+  animation: float-up linear infinite;
+  user-select: none;
+}
+@keyframes float-up {
+  0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(-10vh) rotate(360deg); opacity: 0; }
+}
+
+/* 主容器 */
+#app {
+  position: relative; z-index: 1;
+  max-width: 780px; margin: 0 auto;
+  padding: 40px 20px 80px;
+  min-height: 100vh;
+  display: flex; flex-direction: column;
+}
+
+/* 标题栏 */
+#header {
+  text-align: center; padding: 30px 0 20px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 30px;
+}
+#header h1 {
+  font-size: 2.2em; color: var(--gold);
+  letter-spacing: 0.3em; font-weight: 700;
+  text-shadow: 0 2px 10px rgba(201,169,110,0.3);
+}
+#header .subtitle {
+  font-size: 0.9em; color: var(--text-dim);
+  margin-top: 8px; letter-spacing: 0.2em;
+}
+
+/* 内容区 — 卷轴风格 */
+#content {
+  flex: 1;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 35px 30px;
+  box-shadow: 0 4px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03);
+  position: relative;
+  min-height: 400px;
+}
+#content::before {
+  content: ''; position: absolute; top: 0; left: 20px; right: 20px;
+  height: 1px; background: linear-gradient(90deg, transparent, var(--border), transparent);
+}
+#content::after {
+  content: ''; position: absolute; bottom: 0; left: 20px; right: 20px;
+  height: 1px; background: linear-gradient(90deg, transparent, var(--border), transparent);
+}
+
+/* 章节标题 */
+.chapter-title {
+  font-size: 1.3em; color: var(--gold);
+  text-align: center; margin-bottom: 25px;
+  letter-spacing: 0.15em;
+}
+.chapter-title::before { content: '—— '; color: var(--text-dim); }
+.chapter-title::after { content: ' ——'; color: var(--text-dim); }
+
+/* 正文 */
+.story-text {
+  font-size: 1.05em; line-height: 2.1;
+  white-space: pre-line; color: var(--text);
+  margin-bottom: 30px; text-indent: 2em;
+}
+
+/* 选项按钮 */
+.choices {
+  display: flex; flex-direction: column; gap: 12px;
+}
+.choice-btn {
+  display: block; width: 100%; padding: 14px 20px;
+  font-family: inherit; font-size: 1em;
+  color: var(--text); background: rgba(0,0,0,0.3);
+  border: 1px solid var(--border); border-radius: 4px;
+  cursor: pointer; text-align: left; transition: all 0.3s;
+  position: relative; overflow: hidden;
+}
+.choice-btn::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+  width: 0; background: linear-gradient(90deg, rgba(201,169,110,0.15), transparent);
+  transition: width 0.4s;
+}
+.choice-btn:hover {
+  border-color: var(--gold); color: var(--gold-light);
+  box-shadow: 0 0 20px rgba(201,169,110,0.1);
+  transform: translateX(4px);
+}
+.choice-btn:hover::before { width: 100%; }
+.choice-btn .idx {
+  display: inline-block; width: 28px; height: 28px; line-height: 28px;
+  text-align: center; border: 1px solid var(--border); border-radius: 50%;
+  margin-right: 12px; font-size: 0.85em; color: var(--gold);
+  transition: all 0.3s;
+}
+.choice-btn:hover .idx {
+  background: var(--gold); color: var(--bg); border-color: var(--gold);
+}
+
+/* 结局样式 */
+.ending-text {
+  text-align: center; padding: 20px 0;
+}
+.ending-text .rank {
+  font-size: 3em; color: var(--gold); margin: 15px 0;
+}
+
+/* 属性面板 */
+#attrs-panel {
+  margin-top: 20px; padding: 12px 18px;
+  background: rgba(0,0,0,0.3); border-radius: 4px;
+  border: 1px solid var(--border);
+  display: flex; flex-wrap: wrap; gap: 10px 20px;
+  justify-content: center; font-size: 0.9em;
+}
+.attr-item {
+  display: flex; align-items: center; gap: 6px;
+}
+.attr-name { color: var(--text-dim); }
+.attr-value { color: var(--gold); font-weight: 700; min-width: 24px; text-align: right; }
+.attr-bar {
+  width: 60px; height: 4px; background: rgba(255,255,255,0.1);
+  border-radius: 2px; overflow: hidden;
+}
+.attr-bar-fill {
+  height: 100%; background: var(--gold); border-radius: 2px;
+  transition: width 0.8s ease;
+}
+
+/* 底部操作栏 */
+#actions {
+  display: flex; gap: 10px; margin-top: 18px; justify-content: center;
+}
+.action-btn {
+  padding: 8px 20px; font-family: inherit; font-size: 0.85em;
+  color: var(--text-dim); background: transparent;
+  border: 1px solid var(--border); border-radius: 4px;
+  cursor: pointer; transition: all 0.3s;
+}
+.action-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+/* 弹窗 */
+.modal-overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.7); z-index: 100;
+  display: flex; align-items: center; justify-content: center;
+}
+.modal {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 8px; padding: 30px; max-width: 500px; width: 90%;
+  box-shadow: 0 10px 50px rgba(0,0,0,0.8);
+  max-height: 80vh; overflow-y: auto;
+}
+.modal h2 {
+  text-align: center; color: var(--gold); margin-bottom: 20px;
+  letter-spacing: 0.1em;
+}
+.modal .close-btn {
+  display: block; margin: 20px auto 0; padding: 8px 30px;
+  font-family: inherit; color: var(--text); background: rgba(0,0,0,0.3);
+  border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+}
+
+/* 角色创建 */
+.attr-input-group {
+  display: flex; align-items: center; gap: 10px; margin: 8px 0;
+}
+.attr-input-group label {
+  width: 50px; color: var(--text); text-align: right;
+}
+.attr-input-group input {
+  width: 70px; padding: 6px 10px; font-family: inherit;
+  background: rgba(0,0,0,0.4); color: var(--gold);
+  border: 1px solid var(--border); border-radius: 4px;
+  text-align: center; font-size: 1em;
+}
+.attr-input-group .attr-hint {
+  font-size: 0.8em; color: var(--text-dim); flex: 1;
+}
+.trait-option {
+  display: block; width: 100%; padding: 10px 15px; margin: 6px 0;
+  font-family: inherit; font-size: 0.95em; text-align: left;
+  color: var(--text); background: rgba(0,0,0,0.3);
+  border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  transition: all 0.3s;
+}
+.trait-option:hover, .trait-option.selected {
+  border-color: var(--gold); color: var(--gold-light);
+  background: rgba(201,169,110,0.1);
+}
+
+/* 名字输入 */
+.name-input {
+  width: 100%; max-width: 300px; padding: 10px 15px;
+  font-family: inherit; font-size: 1.1em; text-align: center;
+  background: rgba(0,0,0,0.4); color: var(--gold);
+  border: 1px solid var(--border); border-radius: 4px;
+}
+
+/* 响应式 */
+@media (max-width: 600px) {
+  #app { padding: 20px 10px 60px; }
+  #content { padding: 20px 15px; }
+  #header h1 { font-size: 1.5em; }
+}
+
+/* 滚动条 */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* 淡入动画 */
+.fade-in {
+  animation: fadeIn 0.5s ease;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 保存成功提示 */
+.toast {
+  position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+  background: var(--panel); border: 1px solid var(--gold);
+  color: var(--gold); padding: 10px 25px; border-radius: 4px;
+  z-index: 200; animation: toastIn 0.3s ease, toastOut 0.3s ease 1.7s forwards;
+}
+@keyframes toastIn { from { opacity: 0; top: -20px; } to { opacity: 1; top: 20px; } }
+@keyframes toastOut { from { opacity: 1; } to { opacity: 0; } }
+
+#remaining-points {
+  text-align: center; font-size: 1.1em; color: var(--gold);
+  margin: 10px 0; padding: 8px;
+  background: rgba(201,169,110,0.08);
+  border-radius: 4px;
+}
+</style>
+</head>
+<body>
+
+<div id="particles"></div>
+
+<div id="app">
+  <div id="header">
+    <h1>仙 途</h1>
+    <div class="subtitle">文 字 修 仙</div>
+  </div>
+  <div id="content"></div>
+  <div id="attrs-panel"></div>
+  <div id="actions"></div>
+</div>
+
+<script>
+// ============================================================
+// 游戏前端逻辑
+// ============================================================
+const SID = 'default';
+const API = '';
+
+let currentNode = null;
+let isEnding = false;
+
+// 初始化粒子
+function initParticles() {
+  const chars = ['✦','✧','❋','•','·','。','、','～'];
+  const container = document.getElementById('particles');
+  for (let i = 0; i < 15; i++) {
+    const p = document.createElement('span');
+    p.className = 'particle';
+    p.textContent = chars[Math.floor(Math.random() * chars.length)];
+    p.style.left = Math.random() * 100 + '%';
+    p.style.animationDuration = (8 + Math.random() * 15) + 's';
+    p.style.animationDelay = Math.random() * 10 + 's';
+    p.style.fontSize = (16 + Math.random() * 30) + 'px';
+    container.appendChild(p);
+  }
+}
+
+// API 调用
+async function api(path, data = {}) {
+  data.session_id = SID;
+  const r = await fetch(API + path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return r.json();
+}
+
+async function apiGet(path) {
+  const r = await fetch(API + path);
+  return r.json();
+}
+
+// Toast 提示
+function toast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2100);
+}
+
+// 渲染属性面板
+function renderAttrs(attrs) {
+  const panel = document.getElementById('attrs-panel');
+  if (!attrs) { panel.innerHTML = ''; return; }
+  const maxVal = 60;
+  panel.innerHTML = Object.entries(attrs).map(([k, v]) => {
+    const pct = Math.min(100, (v / maxVal) * 100);
+    return `<div class="attr-item">
+      <span class="attr-name">${k}</span>
+      <span class="attr-value">${v}</span>
+      <div class="attr-bar"><div class="attr-bar-fill" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+// 渲染操作按钮
+function renderActions() {
+  const el = document.getElementById('actions');
+  el.innerHTML = `
+    <button class="action-btn" onclick="saveGame()">💾 保存进度</button>
+    <button class="action-btn" onclick="showLoadModal()">📂 读取存档</button>
+    <button class="action-btn" onclick="restartGame()">🔄 重新开始</button>
+  `;
+}
+
+// 渲染文本（支持换行）
+function renderText(text) {
+  return text.replace(/\n/g, '<br>');
+}
+
+// 显示节点
+function renderNode(data) {
+  currentNode = data;
+  isEnding = data.is_ending;
+  const content = document.getElementById('content');
+
+  let html = `<div class="fade-in">`;
+  html += `<div class="chapter-title">${data.title}</div>`;
+  html += `<div class="story-text">${renderText(data.text)}</div>`;
+
+  if (data.is_ending) {
+    html += `<div class="choices">`;
+    html += `<button class="choice-btn" onclick="restartGame()"><span class="idx">1</span>重新开始</button>`;
+    html += `<button class="choice-btn" onclick="showStartScreen()"><span class="idx">2</span>返回主菜单</button>`;
+    html += `</div>`;
+  } else if (data.choices && data.choices.length > 0) {
+    html += `<div class="choices">`;
+    data.choices.forEach((c, i) => {
+      html += `<button class="choice-btn" onclick="makeChoice(${c.index})">
+        <span class="idx">${i + 1}</span>${c.text}
+      </button>`;
+    });
+    html += `</div>`;
+  }
+
+  html += `</div>`;
+  content.innerHTML = html;
+
+  renderAttrs(data.attrs);
+  renderActions();
+  content.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// 做选择
+async function makeChoice(idx) {
+  const data = await api('/api/choice', { choice: idx });
+  renderNode(data);
+}
+
+// 保存
+async function saveGame() {
+  const d = await api('/api/save');
+  if (d.ok) toast('✓ 存档已保存');
+}
+
+// 加载弹窗
+async function showLoadModal() {
+  const saves = await apiGet('/api/saves');
+  let html = '<div class="modal-overlay" onclick="this.remove()"><div class="modal" onclick="event.stopPropagation()">';
+  html += '<h2>读取存档</h2>';
+
+  if (saves.length === 0) {
+    html += '<p style="text-align:center;color:var(--text-dim)">暂无存档</p>';
+  } else {
+    saves.forEach(s => {
+      html += `<button class="trait-option" onclick="loadGame('${s.filename}')">
+        ${s.name} — ${s.title}<br>
+        <small style="color:var(--text-dim)">${s.saved_at}</small>
+      </button>`;
+    });
+  }
+
+  html += '<button class="close-btn" onclick="this.closest(\'.modal-overlay\').remove()">关闭</button>';
+  html += '</div></div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+// 加载存档
+async function loadGame(filename) {
+  document.querySelectorAll('.modal-overlay').forEach(m => m.remove());
+  const data = await api('/api/load', { filename });
+  renderNode(data);
+  toast('✓ 存档已加载');
+}
+
+// 重新开始
+async function restartGame() {
+  const data = await api('/api/restart');
+  renderNode(data);
+  toast('已重新开始');
+}
+
+// 主菜单
+function showStartScreen() {
+  showMainMenu();
+}
+
+// ============================================================
+// 初始流程：名字 → 属性 → 词条 → 开始
+// ============================================================
+async function showMainMenu() {
+  const content = document.getElementById('content');
+  content.innerHTML = `
+    <div class="fade-in" style="text-align:center">
+      <div class="chapter-title">序章 · 天降机缘</div>
+      <div class="story-text" style="text-align:center;text-indent:0">
+        一段机缘，一个选择，一世仙途……<br>
+        你的每一个决定，都将改变命运。
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;max-width:300px;margin:0 auto">
+        <button class="choice-btn" onclick="showNewGameDialog()"><span class="idx">1</span>开始新游戏</button>
+        <button class="choice-btn" onclick="showLoadModal()"><span class="idx">2</span>读取存档</button>
+      </div>
+    </div>`;
+  document.getElementById('attrs-panel').innerHTML = '';
+  document.getElementById('actions').innerHTML = '';
+}
+
+async function showNewGameDialog() {
+  const content = document.getElementById('content');
+  content.innerHTML = `
+    <div class="fade-in" style="text-align:center">
+      <div class="chapter-title">创建角色</div>
+      <p style="margin-bottom:15px">请输入你的角色名</p>
+      <input class="name-input" id="name-input" value="叶尘" maxlength="10"
+        style="display:block;margin:0 auto 20px">
+      <button class="choice-btn" style="max-width:200px;margin:0 auto" onclick="initNewGame()">
+        <span class="idx">→</span>确认
+      </button>
+    </div>`;
+  document.getElementById('name-input').focus();
+  document.getElementById('name-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') initNewGame();
+  });
+}
+
+async function initNewGame() {
+  const name = document.getElementById('name-input').value.trim() || '叶尘';
+  await api('/api/new_game', { name });
+
+  const content = document.getElementById('content');
+  const total = 100;
+  const min = 5;
+  let attrs = { 根骨: min, 幸运: min, 魅力: min, 精神: min, 悟性: min };
+  let remaining = total - Object.keys(attrs).length * min;
+
+  function renderAttrUI() {
+    content.innerHTML = `
+      <div class="fade-in">
+        <div class="chapter-title">分配属性</div>
+        <div id="remaining-points">剩余点数: <strong>${remaining}</strong></div>
+        ${Object.entries(attrs).map(([k, v]) => `
+          <div class="attr-input-group">
+            <label>${k}</label>
+            <button onclick="window._adjAttr('${k}', -1)" style="padding:4px 8px;font-family:inherit;background:rgba(0,0,0,0.4);color:var(--text);border:1px solid var(--border);border-radius:3px;cursor:pointer">-</button>
+            <input type="number" value="${v}" min="${min}" max="${v + remaining}" id="attr-${k}"
+              onchange="window._setAttr('${k}', parseInt(this.value))">
+            <button onclick="window._adjAttr('${k}', 1)" style="padding:4px 8px;font-family:inherit;background:rgba(0,0,0,0.4);color:var(--text);border:1px solid var(--border);border-radius:3px;cursor:pointer">+</button>
+            <span class="attr-hint">${{根骨:'战斗·肉身',幸运:'机缘·寻宝',魅力:'社交·交易',精神:'意志·心魔',悟性:'学习·功法'}[k]}</span>
+          </div>
+        `).join('')}
+        <button class="choice-btn" style="max-width:200px;margin:20px auto;display:block"
+          onclick="window._confirmAttrs()">
+          <span class="idx">→</span>确认属性
+        </button>
+      </div>`;
+
+    window._adjAttr = function(k, delta) {
+      const newVal = attrs[k] + delta;
+      if (newVal < min || delta > remaining) return;
+      attrs[k] = newVal;
+      remaining -= delta;
+      renderAttrUI();
+    };
+    window._setAttr = function(k, val) {
+      if (isNaN(val)) return;
+      const old = attrs[k];
+      const diff = val - old;
+      if (val < min || diff > remaining + old - old) return;
+      const actual = Math.max(min, Math.min(old + remaining, val));
+      remaining -= (actual - old);
+      attrs[k] = actual;
+      renderAttrUI();
+    };
+    window._confirmAttrs = function() {
+      if (remaining > 0) {
+        if (!confirm(`还有 ${remaining} 点未分配，确定继续？`)) return;
+      }
+      showTraitSelection(attrs);
+    };
+  }
+
+  renderAttrUI();
+}
+
+function showTraitSelection(attrs) {
+  const content = document.getElementById('content');
+  let selectedTrait = '1';
+
+  const traits = {
+    '1': { name: '天生剑骨', desc: '根骨+10，自幼筋骨异于常人', bonus: '根骨+10' },
+    '2': { name: '天命所归', desc: '幸运+15，冥冥中有气运加身', bonus: '幸运+15' },
+    '3': { name: '龙凤之姿', desc: '魅力+15，天生一副好皮囊', bonus: '魅力+15' },
+    '4': { name: '心如磐石', desc: '精神+15，意志坚不可摧', bonus: '精神+15' },
+    '5': { name: '七窍玲珑', desc: '悟性+15，一点即通举一反三', bonus: '悟性+15' },
+    '6': { name: '天道酬勤', desc: '五项各+4，全面均衡发展', bonus: '五项各+4' },
+  };
+
+  function renderTraitUI() {
+    content.innerHTML = `
+      <div class="fade-in">
+        <div class="chapter-title">选择词条</div>
+        ${Object.entries(traits).map(([k, t]) => `
+          <button class="trait-option${k === selectedTrait ? ' selected' : ''}"
+            onclick="window._selectTrait('${k}')">
+            <strong>${t.name}</strong> — ${t.bonus}<br>
+            <small style="color:var(--text-dim)">${t.desc}</small>
+          </button>
+        `).join('')}
+        <button class="choice-btn" style="max-width:200px;margin:20px auto;display:block"
+          onclick="window._confirmTrait()">
+          <span class="idx">→</span>开始游戏
+        </button>
+      </div>`;
+
+    window._selectTrait = function(k) {
+      selectedTrait = k;
+      renderTraitUI();
+    };
+    window._confirmTrait = async function() {
+      const data = await api('/api/set_attrs', { attrs, trait: selectedTrait });
+      renderNode(data);
+    };
+  }
+
+  renderTraitUI();
+}
+
+// ============================================================
+// 启动
+// ============================================================
+initParticles();
+showMainMenu();
+</script>
+</body>
+</html>
