@@ -287,10 +287,107 @@ body {
   background: rgba(201,169,110,0.08);
   border-radius: 4px;
 }
+
+/* ========== 章节过渡动画 ========== */
+.chapter-transition {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: var(--bg); z-index: 50;
+  display: flex; align-items: center; justify-content: center;
+  animation: chapterIn 0.6s ease-out;
+  pointer-events: none;
+}
+.chapter-transition.out {
+  animation: chapterOut 0.4s ease-in forwards;
+}
+@keyframes chapterIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes chapterOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+.chapter-transition .chinese-char {
+  font-size: 5em; color: var(--gold);
+  animation: charAppear 0.8s ease-out;
+}
+@keyframes charAppear {
+  from { transform: scale(3); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* ========== 墨染过渡 ========== */
+.ink-spread {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none; z-index: 49;
+  background: radial-gradient(circle at center, var(--bg) 0%, transparent 70%);
+  animation: inkSpread 0.6s ease-out forwards;
+}
+@keyframes inkSpread {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* ========== 结局总结 ========== */
+.ending-summary {
+  background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+  border-radius: 6px; padding: 20px; margin: 20px 0;
+}
+.ending-summary .path-timeline {
+  display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0;
+  justify-content: center;
+}
+.path-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--gold); opacity: 0.5;
+}
+.ending-summary table {
+  width: 100%; margin: 15px 0; border-collapse: collapse;
+}
+.ending-summary td {
+  padding: 6px 10px; border-bottom: 1px solid var(--border);
+}
+.ending-summary td:last-child { text-align: right; color: var(--gold); }
+
+/* ========== 画廊 ========== */
+.gallery-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px; margin: 15px 0;
+}
+.gallery-card {
+  background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+  border-radius: 6px; padding: 12px; text-align: center;
+  transition: all 0.3s;
+}
+.gallery-card:hover { border-color: var(--gold); }
+.gallery-card .rank-badge {
+  display: inline-block; padding: 2px 10px; border-radius: 10px;
+  font-size: 0.8em; font-weight: 700; margin: 4px 0;
+}
+.rank-ss { background: #c9a96e; color: #1a1410; }
+.rank-s { background: #a0522d; color: #d4c5a9; }
+.rank-a { background: #6b8e6b; color: #d4c5a9; }
+.rank-b { background: #3a5070; color: #d4c5a9; }
+.rank-c, .rank-d { background: #5a3a3a; color: #d4c5a9; }
+.gallery-count {
+  text-align: center; font-size: 0.9em; color: var(--text-dim);
+  margin-bottom: 10px;
+}
+
+/* ========== 音效按钮 ========== */
+#audio-toggle {
+  position: fixed; top: 15px; right: 15px; z-index: 30;
+  width: 36px; height: 36px; border-radius: 50%;
+  background: rgba(0,0,0,0.5); border: 1px solid var(--border);
+  color: var(--text-dim); cursor: pointer; font-size: 16px;
+  transition: all 0.3s;
+}
+#audio-toggle:hover { border-color: var(--gold); color: var(--gold); }
 </style>
 </head>
 <body>
 
+<button id="audio-toggle" onclick="toggleAudio()" title="音效开关">🔇</button>
 <div id="particles"></div>
 
 <div id="app">
@@ -681,6 +778,210 @@ function showTraitSelection(attrs) {
     renderNode(data);
   });
 }
+
+// ============================================================
+// Web Audio API — 古风氛围音
+// ============================================================
+let audioCtx = null;
+let audioOn = true;
+
+function initAudio() {
+  if (audioCtx) return;
+  try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) { audioOn = false; }
+}
+
+function playNote(freq, duration, type = 'sine', vol = 0.06) {
+  if (!audioOn || !audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+  osc.connect(gain); gain.connect(audioCtx.destination);
+  osc.start(); osc.stop(audioCtx.currentTime + duration);
+}
+
+// 点击选项时播放
+function playChoiceClick() {
+  playNote(880, 0.08, 'sine', 0.04);
+  setTimeout(() => playNote(1100, 0.06, 'sine', 0.03), 50);
+}
+
+// 章节切换时播放
+function playChapterSound() {
+  playNote(220, 0.6, 'triangle', 0.05);
+  setTimeout(() => playNote(330, 0.4, 'triangle', 0.04), 200);
+  setTimeout(() => playNote(440, 0.3, 'triangle', 0.03), 400);
+}
+
+// 到达结局时播放
+function playEndingSound() {
+  [523, 659, 784, 1047].forEach((f, i) => {
+    setTimeout(() => playNote(f, 0.5, 'triangle', 0.06), i * 150);
+  });
+}
+
+function toggleAudio() {
+  initAudio();
+  audioOn = !audioOn;
+  document.getElementById('audio-toggle').textContent = audioOn ? '🔊' : '🔇';
+  if (audioOn) playNote(440, 0.1, 'sine', 0.03);
+}
+
+// ============================================================
+// 章节过渡
+// ============================================================
+function showChapterTransition(title, callback) {
+  const chars = '仙途问道剑丹宗魔缘尘世命运劫';
+  const el = document.createElement('div');
+  el.className = 'chapter-transition';
+  const char = chars[Math.floor(Math.random() * chars.length)];
+  el.innerHTML = `<span class="chinese-char">${char}</span>`;
+  document.body.appendChild(el);
+  setTimeout(() => {
+    el.classList.add('out');
+    setTimeout(() => { el.remove(); if (callback) callback(); }, 400);
+  }, 800);
+}
+
+// ============================================================
+// 结局画廊
+// ============================================================
+async function showGallery() {
+  const endings = await apiGet('/api/gallery');
+  const total = 46; // 总共有 46 个结局
+  const content = document.getElementById('content');
+
+  function getRankClass(title) {
+    const t = title || '';
+    if (t.includes('SS')) return 'rank-ss';
+    if (t.includes('S——') || t.includes('S：')) return 'rank-s';
+    if (t.includes('A——') || t.includes('A：')) return 'rank-a';
+    if (t.includes('B——') || t.includes('B：')) return 'rank-b';
+    return 'rank-d';
+  }
+  function getRankLabel(title) {
+    const t = title || '';
+    if (t.includes('SS')) return 'SS';
+    if (t.includes('S——') || t.includes('S：')) return 'S';
+    if (t.includes('A——') || t.includes('A：')) return 'A';
+    if (t.includes('B——') || t.includes('B：')) return 'B';
+    if (t.includes('C——') || t.includes('C：')) return 'C';
+    return 'D';
+  }
+
+  let html = `<div class="fade-in">
+    <div class="chapter-title">结局画廊</div>
+    <div class="gallery-count">已收集: ${endings.length} / ${total}</div>`;
+
+  if (endings.length === 0) {
+    html += '<p style="text-align:center;color:var(--text-dim)">还没有达成任何结局，去探索吧。</p>';
+  } else {
+    html += '<div class="gallery-grid">';
+    endings.forEach(e => {
+      html += `<div class="gallery-card">
+        <div class="rank-badge ${getRankClass(e.title)}">${getRankLabel(e.title)}</div>
+        <p style="margin:8px 0;font-size:0.9em">${e.title.replace('【结局】','')}</p>
+        <p style="font-size:0.75em;color:var(--text-dim)">${e.saved_at || e.achieved_at}</p>
+        <p style="font-size:0.75em;color:var(--text-dim)">${e.player_name} · ${e.trait}</p>
+      </div>`;
+    });
+    html += '</div>';
+  }
+  html += `<button class="choice-btn" style="max-width:200px;margin:10px auto;display:block" onclick="showMainMenu()">
+    <span class="idx">←</span>返回主菜单</button></div>`;
+
+  content.innerHTML = html;
+  document.getElementById('attrs-panel').innerHTML = '';
+  document.getElementById('actions').innerHTML = '';
+}
+
+// ============================================================
+// 结局总结
+// ============================================================
+async function showEndingSummary(data) {
+  await api('/api/record_ending');
+  playEndingSound();
+
+  const node = data;
+  let summaryHTML = '<div class="ending-summary">';
+  summaryHTML += '<div class="chapter-title">通关总结</div>';
+
+  // 属性概览
+  summaryHTML += '<table><tr><td colspan="2" style="color:var(--gold);text-align:center">最终属性</td></tr>';
+  for (const [k, v] of Object.entries(data.attrs || {})) {
+    const bar = '█'.repeat(Math.min(20, Math.round(v / 3))) + '░'.repeat(Math.max(0, 20 - Math.round(v / 3)));
+    summaryHTML += `<tr><td>${k}</td><td>${v} ${bar}</td></tr>`;
+  }
+  summaryHTML += '</table>';
+
+  // 决策轮数
+  summaryHTML += `<p style="text-align:center;color:var(--text-dim);margin-top:12px">
+    词条: ${data.trait || '无'} · 结局: ${(node.title || '').replace('【结局】','')}
+  </p>`;
+  summaryHTML += '</div>';
+
+  return summaryHTML;
+}
+
+// ============================================================
+// 重写 renderNode — 接入所有新功能
+// ============================================================
+const _renderNode_original = renderNode;
+renderNode = async function(data) {
+  const chapter = getChapter(data.title);
+
+  // 章节切换过渡
+  if (chapter && chapter !== lastChapter && lastChapter !== '') {
+    showChapterTransition(chapter);
+    playChapterSound();
+  }
+
+  _renderNode_original(data);
+
+  // 结局总结 — 渲染到正文下方
+  if (data.is_ending) {
+    const summary = await showEndingSummary(data);
+    const storyEl = document.querySelector('.story-text');
+    if (storyEl) {
+      const div = document.createElement('div');
+      div.innerHTML = summary;
+      storyEl.parentNode.insertBefore(div, storyEl.nextSibling);
+    }
+  }
+};
+
+// 重写 makeChoice — 播放点击音效
+const _makeChoice_original = makeChoice;
+makeChoice = async function(idx) {
+  initAudio();
+  playChoiceClick();
+  await _makeChoice_original(idx);
+};
+
+// ============================================================
+// 重写主菜单 — 加入画廊入口
+// ============================================================
+const _showMainMenu_original = showMainMenu;
+showMainMenu = function() {
+  const content = document.getElementById('content');
+  content.innerHTML = `
+    <div class="fade-in" style="text-align:center">
+      <div class="chapter-title">仙 途</div>
+      <div class="story-text" style="text-align:center;text-indent:0">
+        一段机缘，一个选择，一世仙途……<br>
+        你的每一个决定，都将改变命运。
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;max-width:300px;margin:0 auto">
+        <button class="choice-btn" onclick="initAudio();playChoiceClick();showNewGameDialog()"><span class="idx">1</span>开始新游戏</button>
+        <button class="choice-btn" onclick="initAudio();playChoiceClick();showLoadModal()"><span class="idx">2</span>读取存档</button>
+        <button class="choice-btn" onclick="initAudio();playChoiceClick();showGallery()"><span class="idx">3</span>结局画廊</button>
+      </div>
+    </div>`;
+  document.getElementById('attrs-panel').innerHTML = '';
+  document.getElementById('actions').innerHTML = '';
+};
 
 // ============================================================
 // 启动

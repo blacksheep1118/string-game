@@ -1,0 +1,43 @@
+{
+  "player_name": "叶尘",
+  "current_node": "ch8_sword_final",
+  "path_history": [
+    "start",
+    "pro_help_1",
+    "pro_help_2",
+    "pro_help_3",
+    "help",
+    "ch2_accept_1",
+    "ch2_accept_2",
+    "ch2_accept_3",
+    "ch2_accept_4",
+    "accept",
+    "sword",
+    "ch3_sword_1",
+    "ch3_sword_2",
+    "ch3_sword_3",
+    "ch3_sword_4",
+    "sword_fight",
+    "ch4_fight_1",
+    "ch4_fight_2",
+    "ch4_fight_3",
+    "ch5_after_fight",
+    "sword_kill",
+    "ch5_kill_1",
+    "ch5_kill_2",
+    "ch5_kill_3",
+    "ch6_kill_reckoning",
+    "ch6_kill_final",
+    "ch7_kill_ascend"
+  ],
+  "attrs": {
+    "根骨": 32,
+    "幸运": 20,
+    "魅力": 24,
+    "精神": 22,
+    "悟性": 22
+  },
+  "trait": "天生剑骨",
+  "title": "第八章 · 剑神",
+  "saved_at": "2026-05-24 00:02:09"
+}

@@ -7,10 +7,17 @@ from datetime import datetime
 
 from flask import Flask, jsonify, request, send_from_directory
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# PyInstaller 打包后资源路径处理
+if getattr(sys, 'frozen', False):
+    BASE_DIR = sys._MEIPASS
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+sys.path.insert(0, BASE_DIR)
 from game import Game, NODES, ATTR_NAMES, TRAITS, ATTR_TOTAL, ATTR_MIN, create_character
 
-app = Flask(__name__, static_folder="static", static_url_path="")
+STATIC_DIR = os.path.join(BASE_DIR, "static")
+app = Flask(__name__, static_folder=STATIC_DIR, static_url_path="")
 
 # 全局游戏实例（简化：单用户）
 games: dict[str, Game] = {}
@@ -209,6 +216,53 @@ def api_load():
     return jsonify(get_node_data(g))
 
 
+@app.route("/api/record_ending", methods=["POST"])
+def api_record_ending():
+    """记录达成的结局到画廊"""
+    data = request.get_json() or {}
+    sid = data.get("session_id", "default")
+    g = games.get(sid)
+    if not g:
+        return jsonify({"error": "no game"}), 400
+
+    node = NODES.get(g.current_node, {})
+    ending_title = node.get("title", "")
+
+    gallery_file = os.path.join(SAVE_DIR, "_gallery.json")
+    gallery = []
+    if os.path.exists(gallery_file):
+        with open(gallery_file, "r", encoding="utf-8") as f:
+            gallery = json.load(f)
+
+    record = {
+        "title": ending_title,
+        "player_name": g.player_name,
+        "trait": g.trait,
+        "attrs": g.attrs,
+        "path_count": len(g.path_history),
+        "achieved_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    }
+
+    # 去重：相同结局不重复记录
+    existing = [e for e in gallery if e["title"] == ending_title]
+    if not existing:
+        gallery.append(record)
+        with open(gallery_file, "w", encoding="utf-8") as f:
+            json.dump(gallery, f, ensure_ascii=False, indent=2)
+
+    return jsonify({"ok": True, "total": len(gallery), "is_new": not existing})
+
+
+@app.route("/api/gallery", methods=["GET"])
+def api_gallery():
+    """获取结局画廊"""
+    gallery_file = os.path.join(SAVE_DIR, "_gallery.json")
+    if not os.path.exists(gallery_file):
+        return jsonify([])
+    with open(gallery_file, "r", encoding="utf-8") as f:
+        return jsonify(json.load(f))
+
+
 @app.route("/api/restart", methods=["POST"])
 def api_restart():
     data = request.get_json() or {}
@@ -256,5 +310,11 @@ if __name__ == "__main__":
     print("╔══════════════════════════════════════╗")
     print("║     ✦ 仙 途 · 文 字 修 仙 ✦        ║")
     print("║   浏览器版本 — http://127.0.0.1:5000  ║")
+    print("║   按 Ctrl+C 退出                      ║")
     print("╚══════════════════════════════════════╝")
+
+    # 自动打开浏览器
+    import webbrowser
+    webbrowser.open("http://127.0.0.1:5000")
+
     app.run(host="127.0.0.1", port=5000, debug=False)

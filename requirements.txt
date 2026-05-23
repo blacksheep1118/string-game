@@ -1,1 +1,3 @@
+# 桌面版（app.py）使用 tkinter，Python 自带，无需额外安装
+# 浏览器版（server.py）需要 flask
 flask>=3.0.0
