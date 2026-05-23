@@ -3605,6 +3605,14 @@ class Game:
         self.path_history = []
         self.attrs = {name: 20 for name in ATTR_NAMES}
         self.trait = ""
+        # 扩展系统
+        self.artifacts = []        # 法宝收集
+        self.inventory = []        # 丹药背包
+        self.affinity = {}         # 好感度 {"师父": 50, "白眉": 30}
+        self.reputation = {"正道": 0, "魔道": 0, "散修": 0}  # 阵营声望
+        self.start_time = None     # 速通计时
+        self.challenge_mode = False  # 挑战模式
+        self.combat_stats = {"hp": 100, "max_hp": 100}  # 战斗血量
 
     def clear_screen(self):
         os.system("cls" if os.name == "nt" else "clear")

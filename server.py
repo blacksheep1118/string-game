@@ -263,6 +263,34 @@ def api_gallery():
         return jsonify(json.load(f))
 
 
+@app.route("/api/achievements", methods=["GET"])
+def api_achievements():
+    pf = os.path.join(SAVE_DIR, "_persist.json")
+    if not os.path.exists(pf):
+        return jsonify({"achievements": [], "endings_count": 0})
+    with open(pf, "r", encoding="utf-8") as f:
+        d = json.load(f)
+    return jsonify({"achievements": d.get("achievements", []), "endings_count": d.get("endings_count", 0)})
+
+
+@app.route("/api/leaderboard", methods=["GET"])
+def api_leaderboard():
+    lb_file = os.path.join(SAVE_DIR, "_leaderboard.json")
+    if not os.path.exists(lb_file):
+        return jsonify([])
+    with open(lb_file, "r", encoding="utf-8") as f:
+        return jsonify(json.load(f))
+
+
+@app.route("/api/fortune", methods=["GET"])
+def api_fortune():
+    import random
+    fortunes = ["大吉", "吉", "中吉", "小吉", "末吉"]
+    bonus = {"大吉": 5, "吉": 3, "中吉": 1, "小吉": 0, "末吉": -3}
+    f = random.choice(fortunes)
+    return jsonify({"fortune": f, "bonus": bonus[f]})
+
+
 @app.route("/api/restart", methods=["POST"])
 def api_restart():
     data = request.get_json() or {}
