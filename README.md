@@ -8,7 +8,13 @@
 
 ### 桌面版（推荐）
 
-双击 **`run_gui.bat`** 或 **`run_gui.pyw`**（无控制台窗口）。
+Windows：双击 **`run_gui.bat`** 或 **`run_gui.pyw`**（无控制台窗口）。
+
+macOS：双击 **`run_gui.command`**，或在终端运行：
+
+```bash
+python3 run_gui.pyw
+```
 
 纯 Python tkinter 实现，零额外依赖。窗口动画、水墨主题、键盘/鼠标双操作。
 
@@ -24,6 +30,21 @@ python game.py
 pip install flask
 python server.py
 # 浏览器访问 http://127.0.0.1:5000
+```
+
+Windows 可双击 **`run_web.bat`**，macOS 可双击 **`run_web.command`**。这两个脚本会监听局域网地址，方便手机访问。
+
+手机访问方式：
+
+1. 让电脑和手机连接同一个 Wi-Fi。
+2. 启动 `run_web.bat` 或 `run_web.command`。
+3. 在手机浏览器打开终端里显示的 `http://电脑局域网IP:5000` 地址。
+
+如需手动指定：
+
+```bash
+python server.py --host 0.0.0.0 --port 5000
+python server.py --host 127.0.0.1 --port 5000 --no-browser
 ```
 
 ### 打包 EXE
@@ -137,7 +158,10 @@ python server.py
 ├── server.py          # 浏览器版后端（Flask）
 ├── static/index.html  # 浏览器版前端
 ├── run_gui.bat/pyw    # 桌面版启动器
+├── run_gui.command    # macOS 桌面版启动器
 ├── run.bat            # 终端版启动器
+├── run_web.bat        # Windows 浏览器版/手机访问启动器
+├── run_web.command    # macOS 浏览器版/手机访问启动器
 ├── build_exe.bat      # 打包脚本
 ├── requirements.txt   # 依赖
 ├── saves/             # 存档/画廊/成就/排行榜

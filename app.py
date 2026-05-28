@@ -7,18 +7,61 @@ import random
 import time
 import threading
 import tkinter as tk
+import tkinter.font as tkfont
 from tkinter import ttk, messagebox
 from datetime import datetime
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+if getattr(sys, "frozen", False):
+    RESOURCE_DIR = getattr(sys, "_MEIPASS", os.path.dirname(sys.executable))
+    APP_DIR = os.path.dirname(sys.executable)
+else:
+    RESOURCE_DIR = os.path.dirname(os.path.abspath(__file__))
+    APP_DIR = RESOURCE_DIR
+
+sys.path.insert(0, RESOURCE_DIR)
 from game import Game, NODES, ATTR_NAMES, TRAITS, ATTR_TOTAL, ATTR_MIN
 
-SAVE_DIR = "saves"
+SAVE_DIR = os.path.join(APP_DIR, "saves")
+EXPORT_DIR = os.path.join(APP_DIR, "exports")
 
 # ============================================================
-# 字体回退 — 优先宋体，兼容所有系统
+# 字体回退 — 根据当前系统选择可用中文字体
 # ============================================================
-FONT = ("SimSun", "Noto Serif CJK SC", "STSong", "NSimSun", "serif")
+FONT_CANDIDATES = (
+    "Songti SC",
+    "STSong",
+    "Microsoft YaHei",
+    "SimSun",
+    "Noto Serif CJK SC",
+    "PingFang SC",
+    "Arial Unicode MS",
+)
+FONT = ("SimSun",)
+
+
+def _enable_dpi_awareness():
+    if sys.platform != "win32":
+        return
+    try:
+        import ctypes
+        ctypes.windll.shcore.SetProcessDpiAwareness(1)
+    except Exception:
+        try:
+            import ctypes
+            ctypes.windll.user32.SetProcessDPIAware()
+        except Exception:
+            pass
+
+
+def _choose_font(root):
+    available = set(tkfont.families(root))
+    for family in FONT_CANDIDATES:
+        if family in available:
+            return family
+    return "TkDefaultFont"
+
+
+_enable_dpi_awareness()
 
 
 # ============================================================
@@ -42,12 +85,15 @@ C = {
 
 class XianTuApp:
     def __init__(self):
+        global FONT
         self.root = tk.Tk()
+        FONT = (_choose_font(self.root),)
         self.root.title("仙途 · 文字修仙")
         # 恢复上次窗口位置/大小
         geo = self._load_geometry()
         self.root.geometry(geo)
         self.root.minsize(600, 480)
+        self.root.after(0, self._ensure_window_visible)
         self.root.configure(bg=C["bg"])
 
         self.game = Game()
@@ -81,8 +127,9 @@ class XianTuApp:
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
         # 背景音乐
-        self.bgm_on = True
-        self._start_bgm()
+        self.bgm_on = sys.platform == "win32"
+        if self.bgm_on:
+            self._start_bgm()
 
         self._setup_styles()
         self._build_ui()
@@ -128,6 +175,7 @@ class XianTuApp:
             self.root.destroy()
 
     def _save_geometry(self):
+        os.makedirs(SAVE_DIR, exist_ok=True)
         geo = self.root.geometry()
         pf = os.path.join(SAVE_DIR, "_persist.json")
         d = {}
@@ -149,6 +197,17 @@ class XianTuApp:
                 return d.get("geometry", "880x680")
             except: pass
         return "880x680"
+
+    def _ensure_window_visible(self):
+        self.root.update_idletasks()
+        x = self.root.winfo_x()
+        y = self.root.winfo_y()
+        w = self.root.winfo_width()
+        h = self.root.winfo_height()
+        screen_w = self.root.winfo_screenwidth()
+        screen_h = self.root.winfo_screenheight()
+        if x + w < 120 or y + h < 120 or x > screen_w - 120 or y > screen_h - 120:
+            self.root.geometry("880x680")
 
     def _setup_styles(self):
         style = ttk.Style()
@@ -192,10 +251,24 @@ class XianTuApp:
             self.content_canvas.itemconfig("inner", width=event.width)
         self.content_canvas.bind("<Configure>", _on_configure)
 
-        # 鼠标滚轮滚动
+        # 鼠标滚轮滚动，兼容 Windows/macOS/Linux 的滚轮事件差异
         def _on_mousewheel(event):
-            self.content_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+            if getattr(event, "num", None) == 4:
+                steps = -3
+            elif getattr(event, "num", None) == 5:
+                steps = 3
+            else:
+                raw = getattr(event, "delta", 0)
+                if sys.platform == "darwin":
+                    steps = -1 if raw > 0 else 1
+                else:
+                    steps = int(-raw / 120)
+                    if steps == 0 and raw:
+                        steps = -1 if raw > 0 else 1
+            self.content_canvas.yview_scroll(steps, "units")
         self.content_canvas.bind("<MouseWheel>", _on_mousewheel)
+        self.content_canvas.bind("<Button-4>", _on_mousewheel)
+        self.content_canvas.bind("<Button-5>", _on_mousewheel)
         self.content_canvas.bind("<Enter>", lambda e: self.content_canvas.focus_set())
 
         # 属性面板 + 立绘
@@ -213,7 +286,7 @@ class XianTuApp:
         self._btn(bottom, "重新开始", self.restart_game, C["text_dim"]).pack(side="left", padx=4)
         self._btn(bottom, "结局画廊", self.show_gallery, C["text_dim"]).pack(side="left", padx=4)
         self._btn(bottom, "排行榜", self.show_leaderboard, C["text_dim"]).pack(side="left", padx=4)
-        self.bgm_btn = self._btn(bottom, "🔊", self._toggle_bgm, C["text_dim"], font_size=8)
+        self.bgm_btn = self._btn(bottom, "🔊" if self.bgm_on else "🔇", self._toggle_bgm, C["text_dim"], font_size=8)
         self.bgm_btn.pack(side="right", padx=4)
         self._btn(bottom, "返回主菜单", self.show_main_menu, C["text_dim"]).pack(side="right", padx=4)
 
@@ -632,6 +705,7 @@ class XianTuApp:
         self.root.bind("3", lambda e: self.show_main_menu())
 
     def _record_ending(self):
+        os.makedirs(SAVE_DIR, exist_ok=True)
         node = NODES.get(self.game.current_node, {})
         gallery_file = os.path.join(SAVE_DIR, "_gallery.json")
         gallery = []
@@ -960,6 +1034,7 @@ class XianTuApp:
         self._update_scroll()
 
         # 记录
+        os.makedirs(SAVE_DIR, exist_ok=True)
         node = {"title": "【隐藏结局】天命所归  评价：SS+——你已洞悉一切"}
         gallery_file = os.path.join(SAVE_DIR, "_gallery.json")
         gallery = []
@@ -1033,8 +1108,15 @@ class XianTuApp:
         t.start()
 
     def _toggle_bgm(self):
+        if sys.platform != "win32":
+            self.bgm_on = False
+            self.bgm_btn.configure(text="🔇")
+            self._toast("桌面音效仅支持 Windows；浏览器版支持全平台音效")
+            return
         self.bgm_on = not self.bgm_on
         self.bgm_btn.configure(text="🔊" if self.bgm_on else "🔇")
+        if self.bgm_on:
+            self._start_bgm()
 
     # ============================================================
     # 7. 炼丹小游戏
@@ -1097,6 +1179,7 @@ class XianTuApp:
     # 9. 排行榜
     # ============================================================
     def _save_leaderboard(self, ending_title):
+        os.makedirs(SAVE_DIR, exist_ok=True)
         lb_file = os.path.join(SAVE_DIR, "_leaderboard.json")
         lb = []
         if os.path.exists(lb_file):
@@ -1225,13 +1308,14 @@ class XianTuApp:
         self.show_main_menu()
 
     def _cycle_font_size(self):
-        self.font_scale = (self.font_scale + 1) % 3  # -1, 0, 1
+        order = [-1, 0, 1]
+        self.font_scale = order[(order.index(self.font_scale) + 1) % len(order)]
         sizes = {-1: "小", 0: "中", 1: "大"}
         self._toast(f"字号: {sizes[self.font_scale]}")
         self.show_main_menu()
 
-    def _sized_font(self, base_size):
-        return (*FONT, base_size + self.font_scale * 2)
+    def _sized_font(self, base_size, *styles):
+        return (*FONT, base_size + self.font_scale * 2, *styles)
 
     # ============================================================
     # 打字机效果
@@ -1565,8 +1649,10 @@ class XianTuApp:
         end_node = NODES.get(self.game.current_node, {})
         text += f"\n★ {end_node.get('title', '结局')}\n"
 
+        os.makedirs(EXPORT_DIR, exist_ok=True)
         filename = f"通关记录_{self.game.player_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
-        with open(filename, "w", encoding="utf-8") as f:
+        filepath = os.path.join(EXPORT_DIR, filename)
+        with open(filepath, "w", encoding="utf-8") as f:
             f.write(text)
         self._toast(f"已导出: {filename}")
 
@@ -1579,8 +1665,9 @@ class XianTuApp:
             import io
             from PIL import ImageGrab
             img = ImageGrab.grab(bbox=(x, y, x + w, y + h))
+            os.makedirs(EXPORT_DIR, exist_ok=True)
             filename = f"screenshot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-            img.save(filename)
+            img.save(os.path.join(EXPORT_DIR, filename))
             self._toast(f"截图已保存: {filename}")
         except:
             self._toast("截图失败，需要安装 Pillow: pip install pillow")

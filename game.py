@@ -17,7 +17,8 @@ if sys.platform == "win32":
     except Exception:
         pass
 
-SAVE_DIR = "saves"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+SAVE_DIR = os.path.join(BASE_DIR, "saves")
 
 # ============================================================
 # 剧情节点数据
@@ -3691,7 +3692,7 @@ class Game:
             "saved_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         }
 
-        filename = f"{SAVE_DIR}/save_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        filename = os.path.join(SAVE_DIR, f"save_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
         with open(filename, "w", encoding="utf-8") as f:
             json.dump(save_data, f, ensure_ascii=False, indent=2)
 

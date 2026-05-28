@@ -3,25 +3,48 @@
 import json
 import os
 import sys
+import argparse
+import socket
 from datetime import datetime
 
 from flask import Flask, jsonify, request, send_from_directory
 
 # PyInstaller 打包后资源路径处理
 if getattr(sys, 'frozen', False):
-    BASE_DIR = sys._MEIPASS
+    RESOURCE_DIR = sys._MEIPASS
+    APP_DIR = os.path.dirname(sys.executable)
 else:
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    RESOURCE_DIR = os.path.dirname(os.path.abspath(__file__))
+    APP_DIR = RESOURCE_DIR
 
-sys.path.insert(0, BASE_DIR)
+sys.path.insert(0, RESOURCE_DIR)
 from game import Game, NODES, ATTR_NAMES, TRAITS, ATTR_TOTAL, ATTR_MIN, create_character
 
-STATIC_DIR = os.path.join(BASE_DIR, "static")
+STATIC_DIR = os.path.join(RESOURCE_DIR, "static")
 app = Flask(__name__, static_folder=STATIC_DIR, static_url_path="")
 
 # 全局游戏实例（简化：单用户）
 games: dict[str, Game] = {}
-SAVE_DIR = "saves"
+SAVE_DIR = os.path.join(APP_DIR, "saves")
+
+
+def safe_save_path(filename: str) -> str:
+    basename = os.path.basename(filename or "")
+    if not basename:
+        return ""
+    return os.path.join(SAVE_DIR, basename)
+
+
+def get_lan_ip() -> str:
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("8.8.8.8", 80))
+            return s.getsockname()[0]
+    except OSError:
+        try:
+            return socket.gethostbyname(socket.gethostname())
+        except OSError:
+            return "127.0.0.1"
 
 
 def get_or_create_game(session_id: str) -> Game:
@@ -32,7 +55,7 @@ def get_or_create_game(session_id: str) -> Game:
 
 @app.route("/")
 def index():
-    return send_from_directory("static", "index.html")
+    return send_from_directory(STATIC_DIR, "index.html")
 
 
 @app.route("/api/new_game", methods=["POST"])
@@ -156,11 +179,11 @@ def api_save():
     # 如果指定了 overwrite 文件名，覆盖该文件（不更新时间戳后缀）
     overwrite = data.get("overwrite", "")
     if overwrite:
-        filepath = os.path.join(SAVE_DIR, overwrite)
+        filepath = safe_save_path(overwrite)
     else:
         ts = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
         filename = f"save_{ts}.json"
-        filepath = os.path.join(SAVE_DIR, filename)
+        filepath = safe_save_path(filename)
 
     with open(filepath, "w", encoding="utf-8") as f:
         json.dump(save_data, f, ensure_ascii=False, indent=2)
@@ -176,8 +199,8 @@ def api_saves():
 
     saves = []
     for f in sorted(os.listdir(SAVE_DIR), reverse=True):
-        if f.endswith(".json"):
-            filepath = os.path.join(SAVE_DIR, f)
+        if f.endswith(".json") and not f.startswith("_"):
+            filepath = safe_save_path(f)
             try:
                 with open(filepath, "r", encoding="utf-8") as fp:
                     d = json.load(fp)
@@ -198,8 +221,8 @@ def api_load():
     sid = data.get("session_id", "default")
     filename = data.get("filename", "")
 
-    filepath = os.path.join(SAVE_DIR, filename)
-    if not os.path.exists(filepath):
+    filepath = safe_save_path(filename)
+    if not filepath or not os.path.exists(filepath):
         return jsonify({"error": "存档不存在"}), 400
 
     with open(filepath, "r", encoding="utf-8") as f:
@@ -228,6 +251,7 @@ def api_record_ending():
     node = NODES.get(g.current_node, {})
     ending_title = node.get("title", "")
 
+    os.makedirs(SAVE_DIR, exist_ok=True)
     gallery_file = os.path.join(SAVE_DIR, "_gallery.json")
     gallery = []
     if os.path.exists(gallery_file):
@@ -305,8 +329,8 @@ def api_restart():
 def api_delete_save():
     data = request.get_json() or {}
     filename = data.get("filename", "")
-    filepath = os.path.join(SAVE_DIR, filename)
-    if os.path.exists(filepath):
+    filepath = safe_save_path(filename)
+    if filepath and os.path.exists(filepath):
         os.remove(filepath)
         return jsonify({"ok": True})
     return jsonify({"error": "存档不存在"}), 400
@@ -335,14 +359,26 @@ def get_node_data(g: Game) -> dict:
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="仙途 · 文字修仙浏览器版")
+    parser.add_argument("--host", default=os.environ.get("XIANTU_HOST", "127.0.0.1"))
+    parser.add_argument("--port", type=int, default=int(os.environ.get("XIANTU_PORT", "5000")))
+    parser.add_argument("--no-browser", action="store_true")
+    args = parser.parse_args()
+
+    local_url = f"http://127.0.0.1:{args.port}"
+    lan_ip = get_lan_ip()
+    lan_url = f"http://{lan_ip}:{args.port}"
+
     print("╔══════════════════════════════════════╗")
     print("║     ✦ 仙 途 · 文 字 修 仙 ✦        ║")
-    print("║   浏览器版本 — http://127.0.0.1:5000  ║")
-    print("║   按 Ctrl+C 退出                      ║")
+    print(f"║   本机访问 — {local_url:<23}║")
+    if args.host in ("0.0.0.0", "::"):
+        print(f"║   手机访问 — {lan_url:<23}║")
+    print("║   按 Ctrl+C 退出                    ║")
     print("╚══════════════════════════════════════╝")
 
-    # 自动打开浏览器
-    import webbrowser
-    webbrowser.open("http://127.0.0.1:5000")
+    if not args.no_browser:
+        import webbrowser
+        webbrowser.open(local_url)
 
-    app.run(host="127.0.0.1", port=5000, debug=False)
+    app.run(host=args.host, port=args.port, debug=False)

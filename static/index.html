@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>仙途 · 文字修仙</title>
 <style>
 /* ============================================================
@@ -13,28 +13,39 @@
 :root {
   --bg: #1a1410;
   --panel: #2a2218;
+  --panel-2: #211b15;
   --gold: #c9a96e;
   --gold-light: #e0c88a;
   --text: #d4c5a9;
   --text-dim: #8a7b65;
   --accent: #a0522d;
   --jade: #6b8e6b;
+  --ink-blue: #49627a;
   --danger: #8b3a3a;
   --border: #3a3020;
+  --page-padding: 20px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
+html { min-height: 100%; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 
 body {
   font-family: 'Noto Serif SC', 'SimSun', 'STSong', serif;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
+  min-height: 100dvh;
   overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  touch-action: manipulation;
   background-image:
     radial-gradient(ellipse at 20% 50%, rgba(201,169,110,0.05) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 20%, rgba(107,142,107,0.04) 0%, transparent 40%),
-    radial-gradient(ellipse at 50% 80%, rgba(160,82,45,0.04) 0%, transparent 40%);
+    radial-gradient(ellipse at 80% 20%, rgba(107,142,107,0.05) 0%, transparent 40%),
+    radial-gradient(ellipse at 50% 80%, rgba(73,98,122,0.05) 0%, transparent 42%);
 }
 
 /* 粒子背景 */
@@ -59,20 +70,21 @@ body {
 /* 主容器 */
 #app {
   position: relative; z-index: 1;
-  max-width: 780px; margin: 0 auto;
-  padding: 40px 20px 80px;
+  width: min(100%, 840px); margin: 0 auto;
+  padding: calc(28px + var(--safe-top)) calc(var(--page-padding) + var(--safe-right)) calc(72px + var(--safe-bottom)) calc(var(--page-padding) + var(--safe-left));
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex; flex-direction: column;
 }
 
 /* 标题栏 */
 #header {
-  text-align: center; padding: 30px 0 20px;
+  text-align: center; padding: 24px 0 18px;
   border-bottom: 1px solid var(--border);
-  margin-bottom: 30px;
+  margin-bottom: 24px;
 }
 #header h1 {
-  font-size: 2.2em; color: var(--gold);
+  font-size: 2.2rem; color: var(--gold);
   letter-spacing: 0.3em; font-weight: 700;
   text-shadow: 0 2px 10px rgba(201,169,110,0.3);
 }
@@ -87,10 +99,11 @@ body {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 4px;
-  padding: 35px 30px;
+  padding: 32px 28px;
   box-shadow: 0 4px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03);
   position: relative;
   min-height: 400px;
+  overflow-wrap: anywhere;
 }
 #content::before {
   content: ''; position: absolute; top: 0; left: 20px; right: 20px;
@@ -103,18 +116,20 @@ body {
 
 /* 章节标题 */
 .chapter-title {
-  font-size: 1.3em; color: var(--gold);
+  font-size: 1.3rem; color: var(--gold);
   text-align: center; margin-bottom: 25px;
   letter-spacing: 0.15em;
+  line-height: 1.55;
 }
 .chapter-title::before { content: '—— '; color: var(--text-dim); }
 .chapter-title::after { content: ' ——'; color: var(--text-dim); }
 
 /* 正文 */
 .story-text {
-  font-size: 1.05em; line-height: 2.1;
+  font-size: 1.05rem; line-height: 2.05;
   white-space: pre-line; color: var(--text);
   margin-bottom: 30px; text-indent: 2em;
+  overflow-wrap: anywhere;
 }
 
 /* 选项按钮 */
@@ -122,12 +137,14 @@ body {
   display: flex; flex-direction: column; gap: 12px;
 }
 .choice-btn {
-  display: block; width: 100%; padding: 14px 20px;
-  font-family: inherit; font-size: 1em;
+  display: flex; width: 100%; padding: 14px 18px;
+  min-height: 48px; align-items: center; gap: 12px;
+  font-family: inherit; font-size: 1rem; line-height: 1.55;
   color: var(--text); background: rgba(0,0,0,0.3);
   border: 1px solid var(--border); border-radius: 4px;
   cursor: pointer; text-align: left; transition: all 0.3s;
   position: relative; overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
 }
 .choice-btn::before {
   content: ''; position: absolute; left: 0; top: 0; bottom: 0;
@@ -137,13 +154,22 @@ body {
 .choice-btn:hover {
   border-color: var(--gold); color: var(--gold-light);
   box-shadow: 0 0 20px rgba(201,169,110,0.1);
-  transform: translateX(4px);
+}
+.choice-btn:active { transform: translateY(1px); border-color: var(--gold); }
+.choice-btn:focus-visible,
+.action-btn:focus-visible,
+.trait-option:focus-visible,
+.modal .close-btn:focus-visible,
+.attr-stepper:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
 }
 .choice-btn:hover::before { width: 100%; }
 .choice-btn .idx {
   display: inline-block; width: 28px; height: 28px; line-height: 28px;
+  flex: 0 0 28px;
   text-align: center; border: 1px solid var(--border); border-radius: 50%;
-  margin-right: 12px; font-size: 0.85em; color: var(--gold);
+  font-size: 0.85rem; color: var(--gold);
   transition: all 0.3s;
 }
 .choice-btn:hover .idx {
@@ -164,10 +190,12 @@ body {
   background: rgba(0,0,0,0.3); border-radius: 4px;
   border: 1px solid var(--border);
   display: flex; flex-wrap: wrap; gap: 10px 20px;
-  justify-content: center; font-size: 0.9em;
+  justify-content: center; font-size: 0.9rem;
 }
+#attrs-panel:empty,
+#actions:empty { display: none; }
 .attr-item {
-  display: flex; align-items: center; gap: 6px;
+  display: grid; grid-template-columns: auto 32px 60px; align-items: center; gap: 6px;
 }
 .attr-name { color: var(--text-dim); }
 .attr-value { color: var(--gold); font-weight: 700; min-width: 24px; text-align: right; }
@@ -182,13 +210,14 @@ body {
 
 /* 底部操作栏 */
 #actions {
-  display: flex; gap: 10px; margin-top: 18px; justify-content: center;
+  display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; justify-content: center;
 }
 .action-btn {
-  padding: 8px 20px; font-family: inherit; font-size: 0.85em;
+  min-height: 40px; padding: 8px 18px; font-family: inherit; font-size: 0.9rem;
   color: var(--text-dim); background: transparent;
   border: 1px solid var(--border); border-radius: 4px;
   cursor: pointer; transition: all 0.3s;
+  -webkit-tap-highlight-color: transparent;
 }
 .action-btn:hover { border-color: var(--gold); color: var(--gold); }
 
@@ -197,45 +226,63 @@ body {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   background: rgba(0,0,0,0.7); z-index: 100;
   display: flex; align-items: center; justify-content: center;
+  padding: calc(16px + var(--safe-top)) calc(16px + var(--safe-right)) calc(16px + var(--safe-bottom)) calc(16px + var(--safe-left));
 }
 .modal {
   background: var(--panel); border: 1px solid var(--border);
-  border-radius: 8px; padding: 30px; max-width: 500px; width: 90%;
+  border-radius: 8px; padding: 28px; max-width: 560px; width: min(100%, 560px);
   box-shadow: 0 10px 50px rgba(0,0,0,0.8);
-  max-height: 80vh; overflow-y: auto;
+  max-height: min(82vh, 720px); overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .modal h2 {
   text-align: center; color: var(--gold); margin-bottom: 20px;
   letter-spacing: 0.1em;
 }
 .modal .close-btn {
-  display: block; margin: 20px auto 0; padding: 8px 30px;
+  display: block; margin: 20px auto 0; min-height: 42px; padding: 8px 30px;
   font-family: inherit; color: var(--text); background: rgba(0,0,0,0.3);
   border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
 }
 
 /* 角色创建 */
 .attr-input-group {
-  display: flex; align-items: center; gap: 10px; margin: 8px 0;
+  display: grid;
+  grid-template-columns: 56px 40px 76px 40px minmax(100px, 1fr);
+  align-items: center; gap: 10px; margin: 8px 0;
 }
 .attr-input-group label {
-  width: 50px; color: var(--text); text-align: right;
+  color: var(--text); text-align: right;
 }
 .attr-input-group input {
-  width: 70px; padding: 6px 10px; font-family: inherit;
+  width: 100%; min-height: 40px; padding: 6px 10px; font-family: inherit;
   background: rgba(0,0,0,0.4); color: var(--gold);
   border: 1px solid var(--border); border-radius: 4px;
-  text-align: center; font-size: 1em;
+  text-align: center; font-size: 1rem;
+}
+.attr-stepper {
+  width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center;
+  font-family: inherit; font-size: 1.1rem; font-weight: 700;
+  color: var(--gold); background: rgba(0,0,0,0.3);
+  border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.attr-stepper:active { transform: translateY(1px); }
+.attr-stepper:hover { border-color: var(--gold); }
+.attr-input-group input:focus {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
 }
 .attr-input-group .attr-hint {
-  font-size: 0.8em; color: var(--text-dim); flex: 1;
+  font-size: 0.85rem; color: var(--text-dim);
 }
 .trait-option {
-  display: block; width: 100%; padding: 10px 15px; margin: 6px 0;
-  font-family: inherit; font-size: 0.95em; text-align: left;
+  display: block; width: 100%; min-height: 52px; padding: 10px 15px; margin: 6px 0;
+  font-family: inherit; font-size: 0.95rem; line-height: 1.45; text-align: left;
   color: var(--text); background: rgba(0,0,0,0.3);
   border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
   transition: all 0.3s;
+  -webkit-tap-highlight-color: transparent;
 }
 .trait-option:hover, .trait-option.selected {
   border-color: var(--gold); color: var(--gold-light);
@@ -244,17 +291,73 @@ body {
 
 /* 名字输入 */
 .name-input {
-  width: 100%; max-width: 300px; padding: 10px 15px;
-  font-family: inherit; font-size: 1.1em; text-align: center;
+  width: 100%; max-width: 320px; min-height: 46px; padding: 10px 15px;
+  font-family: inherit; font-size: 1.05rem; text-align: center;
   background: rgba(0,0,0,0.4); color: var(--gold);
   border: 1px solid var(--border); border-radius: 4px;
 }
 
+@media (hover: hover) and (pointer: fine) {
+  .choice-btn:hover { transform: translateX(4px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+  .particle { display: none; }
+}
+
 /* 响应式 */
-@media (max-width: 600px) {
-  #app { padding: 20px 10px 60px; }
-  #content { padding: 20px 15px; }
-  #header h1 { font-size: 1.5em; }
+@media (max-width: 720px) {
+  :root { --page-padding: 14px; }
+  #app { padding-top: calc(18px + var(--safe-top)); }
+  #header { padding: 14px 0 14px; margin-bottom: 16px; }
+  #header h1 { font-size: 1.65rem; letter-spacing: 0.22em; }
+  #header .subtitle { font-size: 0.82rem; letter-spacing: 0.14em; }
+  #content { padding: 22px 16px; min-height: 360px; }
+  .chapter-title { font-size: 1.1rem; margin-bottom: 18px; letter-spacing: 0.08em; }
+  .chapter-title::before,
+  .chapter-title::after { content: ''; }
+  .story-text { font-size: 1rem; line-height: 1.85; text-indent: 0; }
+  .choice-btn { padding: 12px 14px; }
+  #attrs-panel { gap: 8px 12px; padding: 10px 12px; justify-content: flex-start; }
+  .attr-item { grid-template-columns: 42px 30px minmax(48px, 1fr); width: calc(50% - 6px); }
+  .attr-bar { width: 100%; }
+  #actions {
+    position: sticky; bottom: var(--safe-bottom); z-index: 20;
+    padding: 10px 0 4px; margin-top: 12px;
+    background: linear-gradient(180deg, transparent, var(--bg) 20%);
+  }
+  .action-btn { flex: 1 1 calc(33.333% - 8px); padding: 8px 10px; }
+  .gallery-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 460px) {
+  :root { --page-padding: 10px; }
+  #content { padding: 18px 12px; }
+  .choice-btn { min-height: 50px; font-size: 0.96rem; }
+  .choice-btn .idx { width: 26px; height: 26px; line-height: 26px; flex-basis: 26px; }
+  .attr-item { width: 100%; }
+  .attr-input-group {
+    grid-template-columns: 52px 40px minmax(70px, 1fr) 40px;
+    gap: 8px;
+  }
+  .attr-input-group .attr-hint {
+    grid-column: 2 / -1;
+    font-size: 0.8rem;
+  }
+  .modal-overlay { align-items: flex-end; padding: 0; }
+  .modal {
+    width: 100%; max-width: none;
+    max-height: calc(88vh - var(--safe-top));
+    border-radius: 8px 8px 0 0;
+    padding: 22px 16px calc(22px + var(--safe-bottom));
+  }
+  #audio-toggle { width: 40px; height: 40px; }
 }
 
 /* 滚动条 */
@@ -376,11 +479,12 @@ body {
 
 /* ========== 音效按钮 ========== */
 #audio-toggle {
-  position: fixed; top: 15px; right: 15px; z-index: 30;
-  width: 36px; height: 36px; border-radius: 50%;
+  position: fixed; top: calc(14px + var(--safe-top)); right: calc(14px + var(--safe-right)); z-index: 30;
+  width: 42px; height: 42px; border-radius: 50%;
   background: rgba(0,0,0,0.5); border: 1px solid var(--border);
   color: var(--text-dim); cursor: pointer; font-size: 16px;
   transition: all 0.3s;
+  -webkit-tap-highlight-color: transparent;
 }
 #audio-toggle:hover { border-color: var(--gold); color: var(--gold); }
 </style>
@@ -404,11 +508,31 @@ body {
 // ============================================================
 // 游戏前端逻辑
 // ============================================================
-const SID = 'default';
+const SID_KEY = 'xiantu_session_id';
+const SID = (() => {
+  const existing = localStorage.getItem(SID_KEY);
+  if (existing) return existing;
+  const next = (window.crypto && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : 'sid-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
+  localStorage.setItem(SID_KEY, next);
+  return next;
+})();
 const API = '';
 
 let currentNode = null;
 let isEnding = false;
+let activeChoices = [];
+
+function escapeHTML(value) {
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  }[ch]));
+}
 
 // 初始化粒子
 function initParticles() {
@@ -434,12 +558,20 @@ async function api(path, data = {}) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  return r.json();
+  const payload = await r.json();
+  if (!r.ok || payload.error) {
+    throw new Error(payload.error || '请求失败');
+  }
+  return payload;
 }
 
 async function apiGet(path) {
   const r = await fetch(API + path);
-  return r.json();
+  const payload = await r.json();
+  if (!r.ok || payload.error) {
+    throw new Error(payload.error || '请求失败');
+  }
+  return payload;
 }
 
 // Toast 提示
@@ -477,7 +609,7 @@ function renderActions() {
 
 // 渲染文本（支持换行）
 function renderText(text) {
-  return text.replace(/\n/g, '<br>');
+  return escapeHTML(text).replace(/\n/g, '<br>');
 }
 
 // 自动存档 — 章节切换时覆盖同一文件
@@ -499,9 +631,13 @@ async function autoSaveOnChapter(data) {
   if (chapter && chapter !== lastChapter && lastChapter !== '') {
     // 首次自动存档创建新文件，后续覆盖同一文件
     const payload = autoSaveFile ? { overwrite: autoSaveFile } : {};
-    const r = await api('/api/save', payload);
-    if (!autoSaveFile && r.filename) autoSaveFile = r.filename;
-    toast('已自动存档 (' + chapter + ')');
+    try {
+      const r = await api('/api/save', payload);
+      if (!autoSaveFile && r.filename) autoSaveFile = r.filename;
+      toast('已自动存档 (' + chapter + ')');
+    } catch (err) {
+      toast(err.message || '自动存档失败');
+    }
   }
   if (chapter) lastChapter = chapter;
 }
@@ -510,13 +646,14 @@ async function autoSaveOnChapter(data) {
 function renderNode(data) {
   currentNode = data;
   isEnding = data.is_ending;
+  activeChoices = data.choices || [];
   const content = document.getElementById('content');
 
   // 章节切换时自动存档（静默，后台完成）
   autoSaveOnChapter(data);
 
   let html = `<div class="fade-in">`;
-  html += `<div class="chapter-title">${data.title}</div>`;
+  html += `<div class="chapter-title">${escapeHTML(data.title)}</div>`;
   html += `<div class="story-text">${renderText(data.text)}</div>`;
 
   if (data.is_ending) {
@@ -528,7 +665,7 @@ function renderNode(data) {
     html += `<div class="choices">`;
     data.choices.forEach((c, i) => {
       html += `<button class="choice-btn" onclick="makeChoice(${c.index})">
-        <span class="idx">${i + 1}</span>${c.text}
+        <span class="idx">${i + 1}</span><span>${escapeHTML(c.text)}</span>
       </button>`;
     });
     html += `</div>`;
@@ -544,19 +681,33 @@ function renderNode(data) {
 
 // 做选择
 async function makeChoice(idx) {
-  const data = await api('/api/choice', { choice: idx });
-  renderNode(data);
+  try {
+    const data = await api('/api/choice', { choice: idx });
+    renderNode(data);
+  } catch (err) {
+    toast(err.message || '操作失败');
+  }
 }
 
 // 保存
 async function saveGame() {
-  const d = await api('/api/save');
-  if (d.ok) toast('✓ 存档已保存');
+  try {
+    const d = await api('/api/save');
+    if (d.ok) toast('✓ 存档已保存');
+  } catch (err) {
+    toast(err.message || '保存失败');
+  }
 }
 
 // 加载弹窗
 async function showLoadModal() {
-  const saves = await apiGet('/api/saves');
+  let saves = [];
+  try {
+    saves = await apiGet('/api/saves');
+  } catch (err) {
+    toast(err.message || '读取存档列表失败');
+    return;
+  }
   let html = '<div class="modal-overlay" onclick="this.remove()"><div class="modal" onclick="event.stopPropagation()">';
   html += '<h2>读取存档</h2>';
 
@@ -564,13 +715,14 @@ async function showLoadModal() {
     html += '<p style="text-align:center;color:var(--text-dim)">暂无存档</p>';
   } else {
     saves.forEach(s => {
+      const filename = JSON.stringify(s.filename);
       html += `<div style="display:flex;gap:8px;align-items:center;margin:6px 0">
-        <button class="trait-option" style="flex:1;margin:0" onclick="loadGame('${s.filename}')">
-          ${s.name} — ${s.title}<br>
-          <small style="color:var(--text-dim)">${s.saved_at}</small>
+        <button class="trait-option" style="flex:1;margin:0" onclick='loadGame(${filename})'>
+          ${escapeHTML(s.name)} — ${escapeHTML(s.title)}<br>
+          <small style="color:var(--text-dim)">${escapeHTML(s.saved_at)}</small>
         </button>
         <button class="action-btn" style="padding:6px 10px;flex-shrink:0"
-          onclick="event.stopPropagation();deleteSave('${s.filename}')"
+          onclick='event.stopPropagation();deleteSave(${filename})'
           title="删除存档">✕</button>
       </div>`;
     });
@@ -585,24 +737,36 @@ async function showLoadModal() {
 async function loadGame(filename) {
   document.querySelectorAll('.modal-overlay').forEach(m => m.remove());
   resetAutoSave();
-  const data = await api('/api/load', { filename });
-  renderNode(data);
-  toast('存档已加载');
+  try {
+    const data = await api('/api/load', { filename });
+    renderNode(data);
+    toast('存档已加载');
+  } catch (err) {
+    toast(err.message || '读取失败');
+  }
 }
 
 // 删除存档
 async function deleteSave(filename) {
   if (!confirm('确定要删除这个存档吗？此操作不可恢复。')) return;
-  await api('/api/delete_save', { filename });
-  document.querySelectorAll('.modal-overlay').forEach(m => m.remove());
-  showLoadModal();
-  toast('存档已删除');
+  try {
+    await api('/api/delete_save', { filename });
+    document.querySelectorAll('.modal-overlay').forEach(m => m.remove());
+    showLoadModal();
+    toast('存档已删除');
+  } catch (err) {
+    toast(err.message || '删除失败');
+  }
 }
 
 // 重新开始 — 回到命名阶段
 async function restartGame() {
   resetAutoSave();
-  await api('/api/restart');
+  try {
+    await api('/api/restart');
+  } catch (err) {
+    toast(err.message || '重启失败');
+  }
   document.getElementById('attrs-panel').innerHTML = '';
   document.getElementById('actions').innerHTML = '';
   showNewGameDialog();
@@ -637,6 +801,9 @@ async function showMainMenu() {
 
 async function showNewGameDialog() {
   resetAutoSave();
+  currentNode = null;
+  isEnding = false;
+  activeChoices = [];
   const content = document.getElementById('content');
   content.innerHTML = `
     <div class="fade-in" style="text-align:center">
@@ -656,7 +823,12 @@ async function showNewGameDialog() {
 
 async function initNewGame() {
   const name = document.getElementById('name-input').value.trim() || '叶尘';
-  await api('/api/new_game', { name });
+  try {
+    await api('/api/new_game', { name });
+  } catch (err) {
+    toast(err.message || '新游戏创建失败');
+    return;
+  }
 
   const content = document.getElementById('content');
   const total = 100;
@@ -670,9 +842,9 @@ async function initNewGame() {
   let rows = Object.keys(attrs).map(k => `
     <div class="attr-input-group">
       <label>${k}</label>
-      <button class="attr-minus" data-key="${k}">−</button>
+      <button class="attr-stepper attr-minus" type="button" data-key="${k}" aria-label="${k}减一">−</button>
       <input type="number" id="attr-${k}" value="${min}" min="${min}" max="${min + remaining}">
-      <button class="attr-plus" data-key="${k}">+</button>
+      <button class="attr-stepper attr-plus" type="button" data-key="${k}" aria-label="${k}加一">+</button>
       <span class="attr-hint">${hints[k]}</span>
     </div>
   `).join('');
@@ -774,8 +946,12 @@ function showTraitSelection(attrs) {
   });
 
   document.getElementById('confirm-trait-btn').addEventListener('click', async () => {
-    const data = await api('/api/set_attrs', { attrs, trait: selectedTrait });
-    renderNode(data);
+    try {
+      const data = await api('/api/set_attrs', { attrs, trait: selectedTrait });
+      renderNode(data);
+    } catch (err) {
+      toast(err.message || '角色创建失败');
+    }
   });
 }
 
@@ -849,7 +1025,13 @@ function showChapterTransition(title, callback) {
 // 结局画廊
 // ============================================================
 async function showGallery() {
-  const endings = await apiGet('/api/gallery');
+  let endings = [];
+  try {
+    endings = await apiGet('/api/gallery');
+  } catch (err) {
+    toast(err.message || '读取画廊失败');
+    return;
+  }
   const total = 46; // 总共有 46 个结局
   const content = document.getElementById('content');
 
@@ -881,10 +1063,10 @@ async function showGallery() {
     html += '<div class="gallery-grid">';
     endings.forEach(e => {
       html += `<div class="gallery-card">
-        <div class="rank-badge ${getRankClass(e.title)}">${getRankLabel(e.title)}</div>
-        <p style="margin:8px 0;font-size:0.9em">${e.title.replace('【结局】','')}</p>
-        <p style="font-size:0.75em;color:var(--text-dim)">${e.saved_at || e.achieved_at}</p>
-        <p style="font-size:0.75em;color:var(--text-dim)">${e.player_name} · ${e.trait}</p>
+        <div class="rank-badge ${getRankClass(e.title)}">${escapeHTML(getRankLabel(e.title))}</div>
+        <p style="margin:8px 0;font-size:0.9rem">${escapeHTML((e.title || '').replace('【结局】',''))}</p>
+        <p style="font-size:0.75rem;color:var(--text-dim)">${escapeHTML(e.saved_at || e.achieved_at || '')}</p>
+        <p style="font-size:0.75rem;color:var(--text-dim)">${escapeHTML(e.player_name || '')} · ${escapeHTML(e.trait || '')}</p>
       </div>`;
     });
     html += '</div>';
@@ -901,7 +1083,11 @@ async function showGallery() {
 // 结局总结
 // ============================================================
 async function showEndingSummary(data) {
-  await api('/api/record_ending');
+  try {
+    await api('/api/record_ending');
+  } catch (err) {
+    toast(err.message || '结局记录失败');
+  }
   playEndingSound();
 
   const node = data;
@@ -912,13 +1098,13 @@ async function showEndingSummary(data) {
   summaryHTML += '<table><tr><td colspan="2" style="color:var(--gold);text-align:center">最终属性</td></tr>';
   for (const [k, v] of Object.entries(data.attrs || {})) {
     const bar = '█'.repeat(Math.min(20, Math.round(v / 3))) + '░'.repeat(Math.max(0, 20 - Math.round(v / 3)));
-    summaryHTML += `<tr><td>${k}</td><td>${v} ${bar}</td></tr>`;
+    summaryHTML += `<tr><td>${escapeHTML(k)}</td><td>${escapeHTML(v)} ${bar}</td></tr>`;
   }
   summaryHTML += '</table>';
 
   // 决策轮数
   summaryHTML += `<p style="text-align:center;color:var(--text-dim);margin-top:12px">
-    词条: ${data.trait || '无'} · 结局: ${(node.title || '').replace('【结局】','')}
+    词条: ${escapeHTML(data.trait || '无')} · 结局: ${escapeHTML((node.title || '').replace('【结局】',''))}
   </p>`;
   summaryHTML += '</div>';
 
@@ -965,6 +1151,9 @@ makeChoice = async function(idx) {
 // ============================================================
 const _showMainMenu_original = showMainMenu;
 showMainMenu = function() {
+  currentNode = null;
+  isEnding = false;
+  activeChoices = [];
   const content = document.getElementById('content');
   content.innerHTML = `
     <div class="fade-in" style="text-align:center">
@@ -982,6 +1171,30 @@ showMainMenu = function() {
   document.getElementById('attrs-panel').innerHTML = '';
   document.getElementById('actions').innerHTML = '';
 };
+
+// 桌面浏览器键盘操作，Mac/Windows 都可用
+document.addEventListener('keydown', event => {
+  const tag = event.target && event.target.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+  if (/^[1-9]$/.test(event.key)) {
+    const idx = Number(event.key) - 1;
+    if (activeChoices[idx]) {
+      event.preventDefault();
+      makeChoice(activeChoices[idx].index);
+    }
+  } else if (event.key.toLowerCase() === 's' && currentNode && !isEnding) {
+    event.preventDefault();
+    saveGame();
+  } else if (event.key === 'Escape') {
+    const modal = document.querySelector('.modal-overlay');
+    if (modal) {
+      modal.remove();
+    } else {
+      showMainMenu();
+    }
+  }
+});
 
 // ============================================================
 // 启动
