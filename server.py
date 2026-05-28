@@ -5,9 +5,10 @@ import os
 import sys
 import argparse
 import socket
+import time
 from datetime import datetime
 
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request, send_file, send_from_directory
 
 # PyInstaller 打包后资源路径处理
 if getattr(sys, 'frozen', False):
@@ -19,20 +20,45 @@ else:
 
 sys.path.insert(0, RESOURCE_DIR)
 from game import Game, NODES, ATTR_NAMES, TRAITS, ATTR_TOTAL, ATTR_MIN, create_character
+from save_manager import (
+    delete_save,
+    list_saves,
+    load_save,
+    safe_filename,
+    save_game,
+    save_path,
+    validate_save_payload,
+    write_save,
+)
 
 STATIC_DIR = os.path.join(RESOURCE_DIR, "static")
 app = Flask(__name__, static_folder=STATIC_DIR, static_url_path="")
 
 # 全局游戏实例（简化：单用户）
 games: dict[str, Game] = {}
+game_last_seen: dict[str, float] = {}
+SESSION_TTL_SECONDS = 60 * 60 * 6
 SAVE_DIR = os.path.join(APP_DIR, "saves")
 
 
 def safe_save_path(filename: str) -> str:
-    basename = os.path.basename(filename or "")
-    if not basename:
-        return ""
-    return os.path.join(SAVE_DIR, basename)
+    return save_path(SAVE_DIR, filename)
+
+
+def error_response(message: str, code: str = "bad_request", status: int = 400):
+    return jsonify({"ok": False, "error": message, "code": code}), status
+
+
+def touch_session(session_id: str) -> None:
+    game_last_seen[session_id] = time.time()
+
+
+def cleanup_sessions() -> None:
+    now = time.time()
+    expired = [sid for sid, seen_at in game_last_seen.items() if now - seen_at > SESSION_TTL_SECONDS]
+    for sid in expired:
+        games.pop(sid, None)
+        game_last_seen.pop(sid, None)
 
 
 def get_lan_ip() -> str:
@@ -48,6 +74,8 @@ def get_lan_ip() -> str:
 
 
 def get_or_create_game(session_id: str) -> Game:
+    cleanup_sessions()
+    touch_session(session_id)
     if session_id not in games:
         games[session_id] = Game()
     return games[session_id]
@@ -60,12 +88,15 @@ def index():
 
 @app.route("/api/new_game", methods=["POST"])
 def api_new_game():
+    cleanup_sessions()
     data = request.get_json() or {}
     sid = data.get("session_id", "default")
     g = Game()
     g.player_name = data.get("name", "叶尘")
     games[sid] = g
+    touch_session(sid)
     return jsonify({
+        "ok": True,
         "node": g.current_node,
         "attrs": g.attrs,
         "trait": g.trait,
@@ -76,23 +107,31 @@ def api_new_game():
 
 @app.route("/api/set_attrs", methods=["POST"])
 def api_set_attrs():
+    cleanup_sessions()
     data = request.get_json() or {}
     sid = data.get("session_id", "default")
     g = games.get(sid)
     if not g:
-        return jsonify({"error": "no game"}), 400
+        return error_response("no game", "no_game")
+    touch_session(sid)
 
     attrs = data.get("attrs", {})
     trait_key = data.get("trait", "1")
+    if not isinstance(attrs, dict):
+        return error_response("属性格式错误", "invalid_attrs")
+    try:
+        attrs = {k: int(attrs.get(k, ATTR_MIN)) for k in ATTR_NAMES}
+    except (TypeError, ValueError):
+        return error_response("属性必须是整数", "invalid_attr_value")
 
     # 验证属性总和
     total = sum(attrs.get(k, 0) for k in ATTR_NAMES)
     if total > ATTR_TOTAL:
-        return jsonify({"error": f"属性总和超过{ATTR_TOTAL}"}), 400
+        return error_response(f"属性总和超过{ATTR_TOTAL}", "attrs_overflow")
 
     for k in ATTR_NAMES:
         if attrs.get(k, ATTR_MIN) < ATTR_MIN:
-            return jsonify({"error": f"{k}不能低于{ATTR_MIN}"}), 400
+            return error_response(f"{k}不能低于{ATTR_MIN}", "attr_too_low")
 
     # 补齐默认值
     for k in ATTR_NAMES:
@@ -112,16 +151,21 @@ def api_set_attrs():
 
 @app.route("/api/choice", methods=["POST"])
 def api_choice():
+    cleanup_sessions()
     data = request.get_json() or {}
     sid = data.get("session_id", "default")
     g = games.get(sid)
     if not g:
-        return jsonify({"error": "no game"}), 400
+        return error_response("no game", "no_game")
+    touch_session(sid)
 
-    choice_idx = data.get("choice", 0)
+    try:
+        choice_idx = int(data.get("choice", 0))
+    except (TypeError, ValueError):
+        return error_response("invalid choice", "invalid_choice")
     node = NODES.get(g.current_node)
-    if not node or choice_idx >= len(node.get("choices", [])):
-        return jsonify({"error": "invalid choice"}), 400
+    if not node or choice_idx < 0 or choice_idx >= len(node.get("choices", [])):
+        return error_response("invalid choice", "invalid_choice")
 
     g.path_history.append(g.current_node)
 
@@ -147,86 +191,51 @@ def api_choice():
 
 @app.route("/api/state", methods=["POST"])
 def api_state():
+    cleanup_sessions()
     data = request.get_json() or {}
     sid = data.get("session_id", "default")
     g = games.get(sid)
     if not g:
-        return jsonify({"error": "no game"}), 400
+        return error_response("no game", "no_game")
+    touch_session(sid)
     return jsonify(get_node_data(g))
 
 
 @app.route("/api/save", methods=["POST"])
 def api_save():
+    cleanup_sessions()
     data = request.get_json() or {}
     sid = data.get("session_id", "default")
     g = games.get(sid)
     if not g:
-        return jsonify({"error": "no game"}), 400
-
-    if not os.path.exists(SAVE_DIR):
-        os.makedirs(SAVE_DIR)
-
-    save_data = {
-        "player_name": g.player_name,
-        "current_node": g.current_node,
-        "path_history": g.path_history,
-        "attrs": g.attrs,
-        "trait": g.trait,
-        "title": NODES[g.current_node]["title"],
-        "saved_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-    }
+        return error_response("no game", "no_game")
+    touch_session(sid)
 
     # 如果指定了 overwrite 文件名，覆盖该文件（不更新时间戳后缀）
     overwrite = data.get("overwrite", "")
-    if overwrite:
-        filepath = safe_save_path(overwrite)
-    else:
-        ts = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
-        filename = f"save_{ts}.json"
-        filepath = safe_save_path(filename)
-
-    with open(filepath, "w", encoding="utf-8") as f:
-        json.dump(save_data, f, ensure_ascii=False, indent=2)
-
-    basename = os.path.basename(filepath)
-    return jsonify({"ok": True, "filename": basename, "saved_at": save_data["saved_at"]})
+    try:
+        filename, save_data = save_game(SAVE_DIR, g, NODES, overwrite=overwrite)
+    except ValueError as exc:
+        return error_response(str(exc), "invalid_filename")
+    return jsonify({"ok": True, "filename": filename, "saved_at": save_data["saved_at"]})
 
 
 @app.route("/api/saves", methods=["GET"])
 def api_saves():
-    if not os.path.exists(SAVE_DIR):
-        return jsonify([])
-
-    saves = []
-    for f in sorted(os.listdir(SAVE_DIR), reverse=True):
-        if f.endswith(".json") and not f.startswith("_"):
-            filepath = safe_save_path(f)
-            try:
-                with open(filepath, "r", encoding="utf-8") as fp:
-                    d = json.load(fp)
-                saves.append({
-                    "filename": f,
-                    "name": d.get("player_name", "未知"),
-                    "title": d.get("title", "未知"),
-                    "saved_at": d.get("saved_at", "未知"),
-                })
-            except (json.JSONDecodeError, KeyError):
-                pass
-    return jsonify(saves)
+    return jsonify(list_saves(SAVE_DIR))
 
 
 @app.route("/api/load", methods=["POST"])
 def api_load():
+    cleanup_sessions()
     data = request.get_json() or {}
     sid = data.get("session_id", "default")
     filename = data.get("filename", "")
 
-    filepath = safe_save_path(filename)
-    if not filepath or not os.path.exists(filepath):
-        return jsonify({"error": "存档不存在"}), 400
-
-    with open(filepath, "r", encoding="utf-8") as f:
-        d = json.load(f)
+    try:
+        d = load_save(SAVE_DIR, filename)
+    except FileNotFoundError:
+        return error_response("存档不存在", "save_not_found")
 
     g = Game()
     g.player_name = d.get("player_name", "叶尘")
@@ -235,6 +244,7 @@ def api_load():
     g.attrs = d.get("attrs", {k: 20 for k in ATTR_NAMES})
     g.trait = d.get("trait", "")
     games[sid] = g
+    touch_session(sid)
 
     return jsonify(get_node_data(g))
 
@@ -242,11 +252,13 @@ def api_load():
 @app.route("/api/record_ending", methods=["POST"])
 def api_record_ending():
     """记录达成的结局到画廊"""
+    cleanup_sessions()
     data = request.get_json() or {}
     sid = data.get("session_id", "default")
     g = games.get(sid)
     if not g:
-        return jsonify({"error": "no game"}), 400
+        return error_response("no game", "no_game")
+    touch_session(sid)
 
     node = NODES.get(g.current_node, {})
     ending_title = node.get("title", "")
@@ -322,18 +334,46 @@ def api_restart():
     # 完全重置游戏状态，回到命名阶段
     if sid in games:
         del games[sid]
-    return jsonify({"state": "restart"})
+    game_last_seen.pop(sid, None)
+    return jsonify({"ok": True, "state": "restart"})
 
 
 @app.route("/api/delete_save", methods=["POST"])
 def api_delete_save():
     data = request.get_json() or {}
     filename = data.get("filename", "")
-    filepath = safe_save_path(filename)
-    if filepath and os.path.exists(filepath):
-        os.remove(filepath)
+    if delete_save(SAVE_DIR, filename):
         return jsonify({"ok": True})
-    return jsonify({"error": "存档不存在"}), 400
+    return error_response("存档不存在", "save_not_found")
+
+
+@app.route("/api/export_save/<path:filename>", methods=["GET"])
+def api_export_save(filename):
+    filepath = safe_save_path(filename)
+    if not filepath or not os.path.exists(filepath):
+        return error_response("存档不存在", "save_not_found", 404)
+    return send_file(filepath, as_attachment=True, download_name=safe_filename(filename))
+
+
+@app.route("/api/import_save", methods=["POST"])
+def api_import_save():
+    data = request.get_json(silent=True) or {}
+    payload = data.get("save")
+    if payload is None and "file" in request.files:
+        try:
+            payload = json.load(request.files["file"].stream)
+        except json.JSONDecodeError:
+            return error_response("存档 JSON 无法解析", "invalid_json")
+    if not isinstance(payload, dict):
+        return error_response("缺少存档内容", "missing_save")
+
+    try:
+        save_data = validate_save_payload(payload, NODES, ATTR_NAMES)
+    except ValueError as exc:
+        return error_response(str(exc), "invalid_save")
+
+    filename, _ = write_save(SAVE_DIR, save_data)
+    return jsonify({"ok": True, "filename": filename, "saved_at": save_data.get("saved_at", "")})
 
 
 def get_node_data(g: Game) -> dict:
@@ -344,6 +384,7 @@ def get_node_data(g: Game) -> dict:
     is_ending = len(node.get("choices", [])) == 0
 
     return {
+        "ok": True,
         "node_id": g.current_node,
         "title": node["title"],
         "text": node["text"],

@@ -8,6 +8,7 @@ import json
 import os
 import sys
 from datetime import datetime
+from save_manager import list_saves as list_save_files, load_save, save_game as write_game_save
 
 # 修复 Windows 终端编码问题
 if sys.platform == "win32":
@@ -3446,6 +3447,25 @@ NODES = {
 }
 
 
+def _load_external_story_nodes():
+    story_file = os.environ.get("XIANTU_STORY_FILE", os.path.join(BASE_DIR, "data", "story_nodes.json"))
+    if not os.path.exists(story_file):
+        return None
+    try:
+        with open(story_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, dict):
+            return data
+    except (OSError, json.JSONDecodeError):
+        return None
+    return None
+
+
+_EXTERNAL_NODES = _load_external_story_nodes()
+if _EXTERNAL_NODES:
+    NODES = _EXTERNAL_NODES
+
+
 # ============================================================
 # 游戏引擎
 # ============================================================
@@ -3679,29 +3699,12 @@ class Game:
             self.current_node = choice["next"]
 
     def save_game(self):
-        if not os.path.exists(SAVE_DIR):
-            os.makedirs(SAVE_DIR)
-
-        save_data = {
-            "player_name": self.player_name,
-            "current_node": self.current_node,
-            "path_history": self.path_history,
-            "attrs": self.attrs,
-            "trait": self.trait,
-            "title": NODES[self.current_node]["title"],
-            "saved_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        }
-
-        filename = os.path.join(SAVE_DIR, f"save_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
-        with open(filename, "w", encoding="utf-8") as f:
-            json.dump(save_data, f, ensure_ascii=False, indent=2)
-
+        filename, _ = write_game_save(SAVE_DIR, self, NODES)
         print(f"\n  ✓ 存档已保存至: {filename}")
         input("\n  按回车键继续...")
 
     def load_game(self, filename):
-        with open(filename, "r", encoding="utf-8") as f:
-            data = json.load(f)
+        data = load_save(SAVE_DIR, filename)
         self.player_name = data["player_name"]
         self.current_node = data["current_node"]
         self.path_history = data["path_history"]
@@ -3711,24 +3714,7 @@ class Game:
 
     @staticmethod
     def list_saves():
-        if not os.path.exists(SAVE_DIR):
-            return []
-        saves = []
-        for f in sorted(os.listdir(SAVE_DIR), reverse=True):
-            if f.endswith(".json"):
-                filepath = os.path.join(SAVE_DIR, f)
-                try:
-                    with open(filepath, "r", encoding="utf-8") as fp:
-                        data = json.load(fp)
-                    saves.append({
-                        "filename": filepath,
-                        "name": data.get("player_name", "未知"),
-                        "title": data.get("title", "未知"),
-                        "saved_at": data.get("saved_at", "未知"),
-                    })
-                except (json.JSONDecodeError, KeyError):
-                    pass
-        return saves
+        return list_save_files(SAVE_DIR)
 
 
 def main_menu():

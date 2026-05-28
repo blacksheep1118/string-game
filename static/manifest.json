@@ -1,0 +1,17 @@
+{
+  "name": "仙途 · 文字修仙",
+  "short_name": "仙途",
+  "description": "水墨风修仙文字游戏",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1410",
+  "theme_color": "#1a1410",
+  "icons": [
+    {
+      "src": "/assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -20,6 +20,8 @@ else:
 
 sys.path.insert(0, RESOURCE_DIR)
 from game import Game, NODES, ATTR_NAMES, TRAITS, ATTR_TOTAL, ATTR_MIN
+from save_manager import delete_save, list_saves, load_save, save_game as write_game_save
+from theme_tokens import DARK_THEME, LIGHT_THEME
 
 SAVE_DIR = os.path.join(APP_DIR, "saves")
 EXPORT_DIR = os.path.join(APP_DIR, "exports")
@@ -67,20 +69,7 @@ _enable_dpi_awareness()
 # ============================================================
 # 配色方案 — 水墨风
 # ============================================================
-C = {
-    "bg":        "#1a1410",
-    "panel":     "#2a2218",
-    "gold":      "#c9a96e",
-    "gold_dim":  "#8a7040",
-    "text":      "#d4c5a9",
-    "text_dim":  "#7a6b55",
-    "accent":    "#a0522d",
-    "border":    "#3a3020",
-    "btn_bg":    "#2a2218",
-    "btn_hover": "#3a3020",
-    "danger":    "#8b3a3a",
-    "white":     "#e8dcc8",
-}
+C = dict(DARK_THEME)
 
 
 class XianTuApp:
@@ -105,11 +94,13 @@ class XianTuApp:
         self.cleared_chapters = set()
         self.endings_count = 0
         self.achievements = set()
+        self.saved_theme = "dark"
+        self.saved_font_scale = 0
         self._load_persist()
 
         # 主题 & 字号
-        self.theme = "dark"  # dark / light
-        self.font_scale = 0  # -1 小 / 0 中 / 1 大
+        self.theme = self.saved_theme  # dark / light
+        self.font_scale = self.saved_font_scale  # -1 小 / 0 中 / 1 大
 
         # 速通计时
         self.timer_running = False
@@ -131,6 +122,7 @@ class XianTuApp:
         if self.bgm_on:
             self._start_bgm()
 
+        self._apply_theme()
         self._setup_styles()
         self._build_ui()
         self._show_splash()
@@ -145,17 +137,28 @@ class XianTuApp:
                 self.cleared_chapters = set(d.get("chapters", []))
                 self.endings_count = d.get("endings_count", 0)
                 self.achievements = set(d.get("achievements", []))
+                self.saved_theme = d.get("theme", "dark")
+                self.saved_font_scale = d.get("font_scale", 0)
             except: pass
 
     def _save_persist(self):
         os.makedirs(SAVE_DIR, exist_ok=True)
         pf = os.path.join(SAVE_DIR, "_persist.json")
+        d = {}
+        if os.path.exists(pf):
+            try:
+                with open(pf, "r", encoding="utf-8") as f:
+                    d = json.load(f)
+            except: pass
+        d.update({
+            "chapters": list(self.cleared_chapters),
+            "endings_count": self.endings_count,
+            "achievements": list(self.achievements),
+            "theme": self.theme,
+            "font_scale": self.font_scale,
+        })
         with open(pf, "w", encoding="utf-8") as f:
-            json.dump({
-                "chapters": list(self.cleared_chapters),
-                "endings_count": self.endings_count,
-                "achievements": list(self.achievements),
-            }, f)
+            json.dump(d, f, ensure_ascii=False, indent=2)
 
     def _fade_in(self, step=0):
         alpha = step * 0.05
@@ -353,24 +356,8 @@ class XianTuApp:
         return m.group(1) if m else ""
 
     def _do_save(self, overwrite=""):
-        os.makedirs(SAVE_DIR, exist_ok=True)
-        node = NODES.get(self.game.current_node, {})
-        save_data = {
-            "player_name": self.game.player_name,
-            "current_node": self.game.current_node,
-            "path_history": self.game.path_history,
-            "attrs": self.game.attrs,
-            "trait": self.game.trait,
-            "title": node.get("title", ""),
-            "saved_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        }
-        if overwrite:
-            filepath = os.path.join(SAVE_DIR, overwrite)
-        else:
-            filepath = os.path.join(SAVE_DIR, f"save_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.json")
-        with open(filepath, "w", encoding="utf-8") as f:
-            json.dump(save_data, f, ensure_ascii=False, indent=2)
-        return os.path.basename(filepath)
+        filename, _ = write_game_save(SAVE_DIR, self.game, NODES, overwrite=overwrite)
+        return filename
 
     # ============================================================
     # 页面渲染
@@ -778,22 +765,7 @@ class XianTuApp:
         self._toast(f"已保存: {filename}")
 
     def show_load_dialog(self):
-        os.makedirs(SAVE_DIR, exist_ok=True)
-        saves = []
-        for f in sorted(os.listdir(SAVE_DIR), reverse=True):
-            if f.endswith(".json") and not f.startswith("_"):
-                filepath = os.path.join(SAVE_DIR, f)
-                try:
-                    with open(filepath, "r", encoding="utf-8") as fp:
-                        d = json.load(fp)
-                    saves.append({
-                        "filename": f,
-                        "name": d.get("player_name", "未知"),
-                        "title": d.get("title", "未知"),
-                        "saved_at": d.get("saved_at", "未知"),
-                    })
-                except (json.JSONDecodeError, KeyError):
-                    pass
+        saves = list_saves(SAVE_DIR)
 
         self._clear_content()
         tk.Label(self.content_inner, text="读取存档", font=(*FONT, 16, "bold"),
@@ -833,9 +805,7 @@ class XianTuApp:
         self._update_scroll()
 
     def _load_game(self, filename):
-        filepath = os.path.join(SAVE_DIR, filename)
-        with open(filepath, "r", encoding="utf-8") as f:
-            d = json.load(f)
+        d = load_save(SAVE_DIR, filename)
         self.game = Game()
         self.game.player_name = d.get("player_name", "叶尘")
         self.game.current_node = d.get("current_node", "start")
@@ -848,7 +818,7 @@ class XianTuApp:
 
     def _delete_save(self, filename):
         if messagebox.askyesno("删除存档", f"确定删除这个存档吗？\n此操作不可恢复。"):
-            os.remove(os.path.join(SAVE_DIR, filename))
+            delete_save(SAVE_DIR, filename)
             self.show_load_dialog()
 
     def restart_game(self):
@@ -1293,18 +1263,15 @@ class XianTuApp:
     # ============================================================
     def _apply_theme(self):
         if self.theme == "light":
-            C.update({"bg": "#f5f0e8", "panel": "#faf6ef", "text": "#3a3020",
-                       "text_dim": "#8a7b65", "btn_bg": "#f0ead8", "btn_hover": "#e8e0c8",
-                       "border": "#c8b898", "gold": "#8a6020", "gold_dim": "#a08050"})
+            C.update(LIGHT_THEME)
         else:
-            C.update({"bg": "#1a1410", "panel": "#2a2218", "text": "#d4c5a9",
-                       "text_dim": "#7a6b55", "btn_bg": "#2a2218", "btn_hover": "#3a3020",
-                       "border": "#3a3020", "gold": "#c9a96e", "gold_dim": "#8a7040"})
+            C.update(DARK_THEME)
         self.root.configure(bg=C["bg"])
 
     def _toggle_theme(self):
         self.theme = "light" if self.theme == "dark" else "dark"
         self._apply_theme()
+        self._save_persist()
         self.show_main_menu()
 
     def _cycle_font_size(self):
@@ -1312,6 +1279,7 @@ class XianTuApp:
         self.font_scale = order[(order.index(self.font_scale) + 1) % len(order)]
         sizes = {-1: "小", 0: "中", 1: "大"}
         self._toast(f"字号: {sizes[self.font_scale]}")
+        self._save_persist()
         self.show_main_menu()
 
     def _sized_font(self, base_size, *styles):

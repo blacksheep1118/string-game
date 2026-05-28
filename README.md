@@ -24,6 +24,14 @@ python3 run_gui.pyw
 python game.py
 ```
 
+也可以使用统一启动器：
+
+```bash
+python launcher.py desktop
+python launcher.py web --lan
+python launcher.py terminal
+```
+
 ### 浏览器版
 
 ```bash
@@ -51,6 +59,12 @@ python server.py --host 127.0.0.1 --port 5000 --no-browser
 
 双击 **`build_exe.bat`**，生成 `dist/XianTu.exe` 单文件独立运行。
 
+macOS 可运行：
+
+```bash
+./build_macos.command
+```
+
 ---
 
 ## 功能一览
@@ -64,6 +78,8 @@ python server.py --host 127.0.0.1 --port 5000 --no-browser
 | 隐藏加成 | 54 个选项会悄悄增减属性，行末 `《+2根骨》` 预览 |
 | 章节自动存档 | 章间覆盖式保存，一局只留一个文件 |
 | 手动存档 | 随时保存留关键节点，弹窗支持删除 |
+| 存档导入导出 | 浏览器版支持 JSON 存档导入、导出和跨设备迁移 |
+| 存档版本迁移 | 存档带 `schema_version`，旧存档会自动补齐字段 |
 | 键盘全操作 | 所有界面均可键盘完成，`?` 查看快捷键 |
 
 ### 重玩与收集
@@ -98,6 +114,8 @@ python server.py --host 127.0.0.1 --port 5000 --no-browser
 |------|------|
 | 水墨/宣纸双主题 | 设置页一键切换 |
 | 字号三档可调 | 小/中/大 |
+| PWA 支持 | 浏览器版可添加到手机主屏幕，核心静态资源可离线缓存 |
+| 响应式适配 | 支持桌面、小窗口、平板和手机竖屏布局 |
 | BGM 古风循环 | 右下角 🔊/🔇 切换 |
 | 窗口记忆 | 关闭时自动保存位置/大小 |
 | 加载画面 | 启动水墨过渡 1.5 秒 |
@@ -149,20 +167,73 @@ python server.py --host 127.0.0.1 --port 5000 --no-browser
 
 ---
 
+## 开发工具
+
+### 校验剧情节点
+
+```bash
+python story_tools.py validate
+```
+
+### 导出剧情数据
+
+```bash
+python story_tools.py export --output data/story_nodes.json
+```
+
+游戏会优先读取 `data/story_nodes.json`，也可以通过环境变量指定：
+
+```bash
+XIANTU_STORY_FILE=/path/to/story_nodes.json python server.py
+```
+
+### 编辑剧情 JSON
+
+```bash
+python story_editor.py list
+python story_editor.py show start
+python story_editor.py set-title start "序章 · 新标题"
+python story_editor.py validate
+```
+
+### 本地检查
+
+```bash
+python -m compileall -q .
+python -m unittest discover -s tests
+```
+
+GitHub Actions 会自动运行语法检查、剧情校验和单元测试。
+
+---
+
 ## 项目结构
 
 ```
 文字游戏/
 ├── app.py             # 桌面版主程序（tkinter）
 ├── game.py            # 游戏引擎
+├── save_manager.py    # 三端共用存档管理
+├── theme_tokens.py    # 桌面/Web 共用颜色令牌
+├── story_tools.py     # 剧情校验/导出工具
+├── story_editor.py    # 剧情 JSON 命令行编辑器
+├── launcher.py        # 跨平台统一启动器
 ├── server.py          # 浏览器版后端（Flask）
-├── static/index.html  # 浏览器版前端
+├── data/story_nodes.json # 外置剧情数据
+├── static/index.html  # 浏览器版 HTML
+├── static/style.css   # 浏览器版样式
+├── static/app.js      # 浏览器版逻辑
+├── static/manifest.json
+├── static/service-worker.js
 ├── run_gui.bat/pyw    # 桌面版启动器
 ├── run_gui.command    # macOS 桌面版启动器
 ├── run.bat            # 终端版启动器
 ├── run_web.bat        # Windows 浏览器版/手机访问启动器
 ├── run_web.command    # macOS 浏览器版/手机访问启动器
 ├── build_exe.bat      # 打包脚本
+├── build_macos.command
+├── XianTu.spec        # PyInstaller 打包配置
+├── tests/             # 自动化检查
 ├── requirements.txt   # 依赖
 ├── saves/             # 存档/画廊/成就/排行榜
 └── README.md

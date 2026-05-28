@@ -12,12 +12,7 @@ python -c "import PyInstaller" 2>nul || pip install pyinstaller -q
 echo [*] Building...
 echo.
 
-pyinstaller --noconfirm --onefile --windowed ^
-  --name "XianTu" ^
-  --add-data "game.py;." ^
-  --hidden-import game ^
-  --hidden-import tkinter ^
-  app.py
+pyinstaller --noconfirm XianTu.spec
 
 echo.
 echo ========================================
