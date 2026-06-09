@@ -134,11 +134,11 @@ function confirmDialog(message, title = '确认') {
 }
 
 // 渲染属性面板
-function renderAttrs(attrs) {
+function renderAttrs(attrs, data = {}) {
   const panel = document.getElementById('attrs-panel');
   if (!attrs) { panel.innerHTML = ''; return; }
   const maxVal = 60;
-  panel.innerHTML = Object.entries(attrs).map(([k, v]) => {
+  const attrHTML = Object.entries(attrs).map(([k, v]) => {
     const pct = Math.min(100, (v / maxVal) * 100);
     return `<div class="attr-item">
       <span class="attr-name">${escapeHTML(k)}</span>
@@ -146,6 +146,18 @@ function renderAttrs(attrs) {
       <div class="attr-bar"><div class="attr-bar-fill" style="width:${pct}%"></div></div>
     </div>`;
   }).join('');
+  const resources = data.resources || {};
+  const resourceHTML = Object.entries(resources).map(([k, v]) => `
+    <span class="stat-chip">${escapeHTML(k)} <strong>${escapeHTML(v)}</strong></span>
+  `).join('');
+  const artifactHTML = (data.artifacts || []).map(name => `
+    <span class="stat-chip">法宝 <strong>${escapeHTML(name)}</strong></span>
+  `).join('');
+  const rep = data.reputation || {};
+  const reputationHTML = Object.entries(rep).filter(([, v]) => Number(v) !== 0).map(([k, v]) => `
+    <span class="stat-chip">${escapeHTML(k)}声望 <strong>${escapeHTML(v)}</strong></span>
+  `).join('');
+  panel.innerHTML = attrHTML + `<div class="stat-section">${resourceHTML}${artifactHTML}${reputationHTML}</div>`;
 }
 
 // 渲染操作按钮
@@ -155,6 +167,8 @@ function renderActions() {
     <button class="action-btn" onclick="saveGame()" aria-label="保存进度">💾 保存进度</button>
     <button class="action-btn" onclick="showLoadModal()" aria-label="读取存档">📂 读取存档</button>
     <button class="action-btn" onclick="restartGame()" aria-label="重新开始">🔄 重新开始</button>
+    <button class="action-btn" onclick="quickRestart()" aria-label="快速轮回">↻ 快速轮回</button>
+    <button class="action-btn" onclick="showDestinyMap()" aria-label="命运图谱">☷ 命运图谱</button>
     <button class="action-btn" onclick="showSettingsModal()" aria-label="打开设置">⚙ 设置</button>
   `;
 }
@@ -162,6 +176,27 @@ function renderActions() {
 // 渲染文本（支持换行）
 function renderText(text) {
   return escapeHTML(text).replace(/\n/g, '<br>');
+}
+
+function renderFeedback(items = []) {
+  if (!items.length) return '';
+  return `<div class="feedback-panel"><ul>${items.map(item => `<li>${escapeHTML(item)}</li>`).join('')}</ul></div>`;
+}
+
+function renderMiniPanel(panel) {
+  if (!panel) return '';
+  const bars = (panel.bars || []).map(bar => `
+    <div>
+      <span>${escapeHTML(bar.label)} ${escapeHTML(bar.value)}%</span>
+      <div class="mini-bar"><span style="width:${Math.max(0, Math.min(100, Number(bar.value) || 0))}%"></span></div>
+    </div>
+  `).join('');
+  return `<div class="mini-panel"><strong>${escapeHTML(panel.title || '态势')}</strong>${bars}</div>`;
+}
+
+function renderChoiceHints(hints = []) {
+  if (!hints.length) return '';
+  return `<span class="choice-hints">${hints.map(h => `<span class="choice-hint">${escapeHTML(h)}</span>`).join('')}</span>`;
 }
 
 // 自动存档 — 章节切换时覆盖同一文件
@@ -206,6 +241,11 @@ function renderNode(data) {
 
   let html = `<div class="fade-in">`;
   html += `<div class="chapter-title">${escapeHTML(data.title)}</div>`;
+  if (data.goal) {
+    html += `<div class="goal-banner"><strong>当前目标</strong>：${escapeHTML(data.goal)}</div>`;
+  }
+  html += renderFeedback(data.feedback || []);
+  html += renderMiniPanel(data.mini_game);
   html += `<div class="story-text">${renderText(data.text)}</div>`;
 
   if (data.is_ending) {
@@ -217,7 +257,7 @@ function renderNode(data) {
     html += `<div class="choices">`;
     data.choices.forEach((c, i) => {
       html += `<button class="choice-btn" onclick="makeChoice(${c.index})">
-        <span class="idx">${i + 1}</span><span>${escapeHTML(c.text)}</span>
+        <span class="idx">${i + 1}</span><span class="choice-text">${escapeHTML(c.text)}${renderChoiceHints(c.hints)}</span>
       </button>`;
     });
     html += `</div>`;
@@ -226,7 +266,7 @@ function renderNode(data) {
   html += `</div>`;
   content.innerHTML = html;
 
-  renderAttrs(data.attrs);
+  renderAttrs(data.attrs, data);
   renderActions();
   content.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -347,6 +387,47 @@ async function restartGame() {
   document.getElementById('actions').innerHTML = '';
   showNewGameDialog();
   toast('已重新开始');
+}
+
+async function quickRestart() {
+  if (!currentNode) {
+    showNewGameDialog();
+    return;
+  }
+  if (!await confirmDialog('以当前角色倾向快速轮回，并回到序章？', '快速轮回')) return;
+  resetAutoSave();
+  try {
+    const data = await api('/api/quick_restart');
+    renderNode(data);
+    toast('已进入新一轮轮回');
+  } catch (err) {
+    toast(err.message || '快速轮回失败');
+  }
+}
+
+async function showDestinyMap() {
+  try {
+    const data = await api('/api/destiny_map');
+    const map = data.map || {};
+    let html = `<div class="modal-overlay" onclick="this.remove()"><div class="modal" onclick="event.stopPropagation()">
+      <h2>命运图谱</h2>`;
+    (map.branches || []).forEach(branch => {
+      html += `<div class="destiny-route"><strong>${escapeHTML(branch.route)}</strong><div class="destiny-nodes">`;
+      (branch.nodes || []).forEach(node => {
+        const cls = ['destiny-node', node.visited ? 'visited' : '', node.is_ending ? 'ending' : ''].join(' ');
+        const mark = node.ending_unlocked ? '●' : node.visited ? '◐' : '○';
+        html += `<span class="${cls}" title="${escapeHTML(node.title)}">${mark} ${escapeHTML(node.title.replace('【结局】', '').slice(0, 12))}</span>`;
+      });
+      html += `</div></div>`;
+    });
+    if (map.achievement_hints && map.achievement_hints.length) {
+      html += `<div class="feedback-panel"><strong>线索</strong><ul>${map.achievement_hints.map(h => `<li>${escapeHTML(h)}</li>`).join('')}</ul></div>`;
+    }
+    html += `<button class="close-btn" onclick="this.closest('.modal-overlay').remove()">关闭</button></div></div>`;
+    document.body.insertAdjacentHTML('beforeend', html);
+  } catch (err) {
+    toast(err.message || '命运图谱读取失败');
+  }
 }
 
 // 主菜单
@@ -739,6 +820,13 @@ async function showEndingSummary(data) {
   }
   summaryHTML += '</table>';
 
+  if (data.score_summary) {
+    summaryHTML += `<div class="score-panel">
+      <strong>评价 ${escapeHTML(data.score_summary.rank)} · ${escapeHTML(data.score_summary.score)} 分</strong>
+      <ul>${(data.score_summary.reasons || []).map(r => `<li>${escapeHTML(r)}</li>`).join('')}</ul>
+    </div>`;
+  }
+
   // 决策轮数
   summaryHTML += `<p style="text-align:center;color:var(--text-dim);margin-top:12px">
     词条: ${escapeHTML(data.trait || '无')} · 结局: ${escapeHTML((node.title || '').replace('【结局】',''))}
@@ -803,7 +891,8 @@ showMainMenu = function() {
         <button class="choice-btn" onclick="initAudio();playChoiceClick();showNewGameDialog()"><span class="idx">1</span>开始新游戏</button>
         <button class="choice-btn" onclick="initAudio();playChoiceClick();showLoadModal()"><span class="idx">2</span>读取存档</button>
         <button class="choice-btn" onclick="initAudio();playChoiceClick();showGallery()"><span class="idx">3</span>结局画廊</button>
-        <button class="choice-btn" onclick="showSettingsModal()"><span class="idx">4</span>设置</button>
+        <button class="choice-btn" onclick="showDestinyMap()"><span class="idx">4</span>命运图谱</button>
+        <button class="choice-btn" onclick="showSettingsModal()"><span class="idx">5</span>设置</button>
       </div>
     </div>`;
   document.getElementById('attrs-panel').innerHTML = '';

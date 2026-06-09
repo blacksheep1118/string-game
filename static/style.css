@@ -141,6 +141,91 @@ body {
   margin-bottom: 30px; text-indent: 2em;
   overflow-wrap: anywhere;
 }
+.goal-banner,
+.feedback-panel,
+.mini-panel,
+.score-panel {
+  background: rgba(0,0,0,0.24);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 12px 14px;
+  margin: 0 0 18px;
+  line-height: 1.7;
+}
+.goal-banner { color: var(--gold-light); }
+.feedback-panel { color: var(--text); }
+.feedback-panel ul { list-style: none; display: grid; gap: 5px; }
+.feedback-panel li::before { content: "◇ "; color: var(--gold); }
+.choice-hints {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.choice-hint {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-dim);
+  font-size: 0.78rem;
+}
+.choice-text { display: block; }
+.stat-section {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+.stat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 28px;
+  padding: 3px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text);
+  background: rgba(0,0,0,0.2);
+}
+.stat-chip strong { color: var(--gold); }
+.mini-bar {
+  height: 8px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+.mini-bar span {
+  display: block;
+  height: 100%;
+  background: var(--jade);
+}
+.destiny-route {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 10px;
+  margin: 8px 0;
+  background: rgba(0,0,0,0.2);
+}
+.destiny-nodes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.destiny-node {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 8px;
+  color: var(--text-dim);
+  font-size: 0.78rem;
+}
+.destiny-node.visited { color: var(--gold); border-color: var(--gold); }
+.destiny-node.ending { background: rgba(201,169,110,0.12); }
 
 /* 选项按钮 */
 .choices {

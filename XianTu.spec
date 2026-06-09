@@ -10,7 +10,7 @@ a = Analysis(
         ('data', 'data'),
         ('static', 'static'),
     ],
-    hiddenimports=['game', 'save_manager', 'story_tools', 'theme_tokens', 'tkinter'],
+    hiddenimports=['game', 'save_manager', 'story_tools', 'theme_tokens', 'playability', 'tkinter'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

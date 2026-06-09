@@ -9,6 +9,7 @@ import os
 import sys
 from datetime import datetime
 from save_manager import list_saves as list_save_files, load_save, save_game as write_game_save
+from playability import choice_hints, ensure_gameplay_state, get_goal
 
 # 修复 Windows 终端编码问题
 if sys.platform == "win32":
@@ -3631,6 +3632,8 @@ class Game:
         self.inventory = []        # 丹药背包
         self.affinity = {}         # 好感度 {"师父": 50, "白眉": 30}
         self.reputation = {"正道": 0, "魔道": 0, "散修": 0}  # 阵营声望
+        self.resources = {"灵石": 0, "心魔": 0, "历练": 0, "丹药": 0, "轮回": 0}
+        self.flags = {"rewarded_nodes": [], "insights": []}
         self.start_time = None     # 速通计时
         self.challenge_mode = False  # 挑战模式
         self.combat_stats = {"hp": 100, "max_hp": 100}  # 战斗血量
@@ -3652,6 +3655,9 @@ class Game:
         self.clear_screen()
         node = NODES[self.current_node]
         self.print_title(node["title"])
+        ensure_gameplay_state(self)
+        print(f"  当前目标：{get_goal(node['title'])}")
+        print()
         for line in node["text"].strip().split("\n"):
             print(f"  {line}")
         print()
@@ -3667,12 +3673,16 @@ class Game:
             return True
 
         for i, choice in enumerate(node["choices"], 1):
-            print(f"  [{i}] {choice['text']}")
+            hints = choice_hints(choice)
+            suffix = f"  《{' · '.join(hints)}》" if hints else ""
+            print(f"  [{i}] {choice['text']}{suffix}")
         print()
 
         # 显示当前属性
         attr_line = " | ".join(f"{n}:{self.attrs[n]}" for n in ATTR_NAMES)
         print(f"  {attr_line}")
+        resource_line = " | ".join(f"{n}:{self.resources.get(n, 0)}" for n in ["灵石", "历练", "丹药", "心魔", "轮回"])
+        print(f"  {resource_line}")
         print()
         print("  输入 1 或 2 做出选择，输入 s 保存进度")
         print()
@@ -3710,6 +3720,13 @@ class Game:
         self.path_history = data["path_history"]
         self.attrs = data.get("attrs", {name: 20 for name in ATTR_NAMES})
         self.trait = data.get("trait", "")
+        self.artifacts = data.get("artifacts", [])
+        self.inventory = data.get("inventory", [])
+        self.affinity = data.get("affinity", {})
+        self.reputation = data.get("reputation", {"正道": 0, "魔道": 0, "散修": 0})
+        self.resources = data.get("resources", {"灵石": 0, "心魔": 0, "历练": 0, "丹药": 0, "轮回": 0})
+        self.flags = data.get("flags", {"rewarded_nodes": [], "insights": []})
+        ensure_gameplay_state(self)
         return data
 
     @staticmethod

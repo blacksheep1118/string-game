@@ -30,6 +30,22 @@ from save_manager import (
     validate_save_payload,
     write_save,
 )
+from playability import (
+    ACHIEVEMENT_HINTS,
+    apply_node_rewards,
+    choice_hints,
+    destiny_map,
+    diff_feedback,
+    ensure_gameplay_state,
+    get_goal,
+    infer_route,
+    load_progression,
+    maybe_random_event,
+    mini_game_for,
+    record_progression,
+    score_summary,
+    snapshot,
+)
 
 STATIC_DIR = os.path.join(RESOURCE_DIR, "static")
 app = Flask(__name__, static_folder=STATIC_DIR, static_url_path="")
@@ -92,15 +108,18 @@ def api_new_game():
     data = request.get_json() or {}
     sid = data.get("session_id", "default")
     g = Game()
+    ensure_gameplay_state(g)
     g.player_name = data.get("name", "叶尘")
     games[sid] = g
     touch_session(sid)
+    progression = load_progression(SAVE_DIR)
     return jsonify({
         "ok": True,
         "node": g.current_node,
         "attrs": g.attrs,
         "trait": g.trait,
         "player_name": g.player_name,
+        "progression": progression,
         "state": "need_attrs",
     })
 
@@ -114,6 +133,7 @@ def api_set_attrs():
     if not g:
         return error_response("no game", "no_game")
     touch_session(sid)
+    ensure_gameplay_state(g)
 
     attrs = data.get("attrs", {})
     trait_key = data.get("trait", "1")
@@ -143,6 +163,12 @@ def api_set_attrs():
         for name, bonus in TRAITS[trait_key]["bonus"].items():
             attrs[name] = attrs.get(name, 0) + bonus
 
+    progression = load_progression(SAVE_DIR)
+    legacy_bonus = min(10, int(progression.get("legacy_points", 0)))
+    if legacy_bonus:
+        attrs["幸运"] = attrs.get("幸运", 0) + legacy_bonus
+        g.resources["轮回"] = legacy_bonus
+
     g.attrs = attrs
     g.current_node = "start"
 
@@ -167,9 +193,13 @@ def api_choice():
     if not node or choice_idx < 0 or choice_idx >= len(node.get("choices", [])):
         return error_response("invalid choice", "invalid_choice")
 
+    ensure_gameplay_state(g)
+    before = snapshot(g)
+    previous_node_id = g.current_node
     g.path_history.append(g.current_node)
 
     choice = node["choices"][choice_idx]
+    feedback = [f"你选择了：{choice.get('text', '')}"]
 
     # 应用属性加成
     effect = choice.get("effect", {})
@@ -179,14 +209,35 @@ def api_choice():
 
     # 检查要求
     req = choice.get("require", {})
+    req_met = True
     if req:
-        met = all(g.attrs.get(k, 0) >= v for k, v in req.items())
-        if not met and "fail" in choice:
+        req_met = all(g.attrs.get(k, 0) >= v for k, v in req.items())
+        if req_met:
+            req_desc = "、".join(f"{k}≥{v}" for k, v in req.items())
+            feedback.append(f"判定通过：{req_desc}")
+        elif len(g.path_history) <= 4 and "fail" in choice:
+            shortest = min(g.attrs.get(k, 0) - v for k, v in req.items())
+            if shortest >= -5:
+                req_met = True
+                feedback.append("初入仙途的机缘护住了你，本次低差距判定勉强通过。")
+        if not req_met and "fail" in choice:
+            feedback.append("判定失败：能力不足，命运转向更艰难的路线。")
             g.current_node = choice["fail"]
-            return jsonify(get_node_data(g))
+            feedback.extend(apply_node_rewards(g, g.current_node, NODES.get(g.current_node, {})))
+            feedback.extend(diff_feedback(before, g))
+            data = get_node_data(g)
+            data["feedback"] = feedback
+            data["choice_result"] = {"passed": False, "from": previous_node_id}
+            return jsonify(data)
 
     g.current_node = choice.get("next", g.current_node)
-    return jsonify(get_node_data(g))
+    feedback.extend(apply_node_rewards(g, g.current_node, NODES.get(g.current_node, {})))
+    feedback.extend(maybe_random_event(g))
+    feedback.extend(diff_feedback(before, g))
+    data = get_node_data(g)
+    data["feedback"] = feedback
+    data["choice_result"] = {"passed": req_met, "from": previous_node_id}
+    return jsonify(data)
 
 
 @app.route("/api/state", methods=["POST"])
@@ -243,6 +294,13 @@ def api_load():
     g.path_history = d.get("path_history", [])
     g.attrs = d.get("attrs", {k: 20 for k in ATTR_NAMES})
     g.trait = d.get("trait", "")
+    g.artifacts = d.get("artifacts", [])
+    g.inventory = d.get("inventory", [])
+    g.affinity = d.get("affinity", {})
+    g.reputation = d.get("reputation", {"正道": 0, "魔道": 0, "散修": 0})
+    g.resources = d.get("resources", {"灵石": 0, "心魔": 0, "历练": 0, "丹药": 0, "轮回": 0})
+    g.flags = d.get("flags", {"rewarded_nodes": [], "insights": []})
+    ensure_gameplay_state(g)
     games[sid] = g
     touch_session(sid)
 
@@ -259,6 +317,7 @@ def api_record_ending():
     if not g:
         return error_response("no game", "no_game")
     touch_session(sid)
+    ensure_gameplay_state(g)
 
     node = NODES.get(g.current_node, {})
     ending_title = node.get("title", "")
@@ -286,7 +345,8 @@ def api_record_ending():
         with open(gallery_file, "w", encoding="utf-8") as f:
             json.dump(gallery, f, ensure_ascii=False, indent=2)
 
-    return jsonify({"ok": True, "total": len(gallery), "is_new": not existing})
+    progression = record_progression(SAVE_DIR, g, ending_title)
+    return jsonify({"ok": True, "total": len(gallery), "is_new": not existing, "progression": progression})
 
 
 @app.route("/api/gallery", methods=["GET"])
@@ -376,12 +436,65 @@ def api_import_save():
     return jsonify({"ok": True, "filename": filename, "saved_at": save_data.get("saved_at", "")})
 
 
+def read_gallery() -> list[dict]:
+    gallery_file = os.path.join(SAVE_DIR, "_gallery.json")
+    if not os.path.exists(gallery_file):
+        return []
+    try:
+        with open(gallery_file, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return []
+
+
+@app.route("/api/progression", methods=["GET"])
+def api_progression():
+    return jsonify({"ok": True, "progression": load_progression(SAVE_DIR), "achievement_hints": ACHIEVEMENT_HINTS})
+
+
+@app.route("/api/destiny_map", methods=["POST"])
+def api_destiny_map():
+    data = request.get_json() or {}
+    sid = data.get("session_id", "default")
+    g = games.get(sid)
+    current_path = []
+    if g:
+        current_path = list(g.path_history) + [g.current_node]
+    return jsonify({"ok": True, "map": destiny_map(NODES, current_path, read_gallery())})
+
+
+@app.route("/api/quick_restart", methods=["POST"])
+def api_quick_restart():
+    data = request.get_json() or {}
+    sid = data.get("session_id", "default")
+    old = games.get(sid)
+    if not old:
+        return error_response("no game", "no_game")
+    ensure_gameplay_state(old)
+    g = Game()
+    ensure_gameplay_state(g)
+    g.player_name = old.player_name or "轮回者"
+    g.trait = old.trait
+    g.attrs = {k: max(ATTR_MIN, int(v)) for k, v in old.attrs.items()}
+    legacy = min(10, int(load_progression(SAVE_DIR).get("legacy_points", 0)))
+    g.attrs["幸运"] = g.attrs.get("幸运", 20) + legacy
+    g.resources["轮回"] = legacy
+    games[sid] = g
+    touch_session(sid)
+    data = get_node_data(g)
+    data["feedback"] = [f"轮回重启：保留角色倾向，幸运获得轮回加成 +{legacy}。"]
+    return jsonify(data)
+
+
 def get_node_data(g: Game) -> dict:
     node = NODES.get(g.current_node)
     if not node:
         return {"error": "node not found"}
 
+    ensure_gameplay_state(g)
     is_ending = len(node.get("choices", [])) == 0
+    route = infer_route(g.current_node, node)
+    summary = score_summary(g, node.get("title", "")) if is_ending else None
 
     return {
         "ok": True,
@@ -389,13 +502,23 @@ def get_node_data(g: Game) -> dict:
         "title": node["title"],
         "text": node["text"],
         "choices": [
-            {"index": i, "text": c["text"]}
+            {"index": i, "text": c["text"], "hints": choice_hints(c)}
             for i, c in enumerate(node.get("choices", []))
         ],
         "is_ending": is_ending,
         "attrs": g.attrs,
+        "resources": g.resources,
+        "artifacts": g.artifacts,
+        "inventory": g.inventory,
+        "affinity": g.affinity,
+        "reputation": g.reputation,
         "trait": g.trait,
         "player_name": g.player_name,
+        "goal": get_goal(node["title"]),
+        "route": route,
+        "mini_game": mini_game_for(g.current_node, node),
+        "achievement_hints": ACHIEVEMENT_HINTS,
+        "score_summary": summary,
     }
 
 

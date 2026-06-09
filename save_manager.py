@@ -45,6 +45,12 @@ def migrate_save(data: dict[str, Any]) -> dict[str, Any]:
     migrated.setdefault("path_history", [])
     migrated.setdefault("attrs", {})
     migrated.setdefault("trait", "")
+    migrated.setdefault("artifacts", [])
+    migrated.setdefault("inventory", [])
+    migrated.setdefault("affinity", {})
+    migrated.setdefault("reputation", {"正道": 0, "魔道": 0, "散修": 0})
+    migrated.setdefault("resources", {"灵石": 0, "心魔": 0, "历练": 0, "丹药": 0, "轮回": 0})
+    migrated.setdefault("flags", {})
     migrated.setdefault("title", "")
     migrated.setdefault("saved_at", "未知")
     migrated["schema_version"] = SCHEMA_VERSION
@@ -60,6 +66,12 @@ def build_save_data(game: Any, nodes: dict[str, dict[str, Any]]) -> dict[str, An
         "path_history": list(game.path_history),
         "attrs": dict(game.attrs),
         "trait": game.trait,
+        "artifacts": list(getattr(game, "artifacts", [])),
+        "inventory": list(getattr(game, "inventory", [])),
+        "affinity": dict(getattr(game, "affinity", {})),
+        "reputation": dict(getattr(game, "reputation", {})),
+        "resources": dict(getattr(game, "resources", {})),
+        "flags": dict(getattr(game, "flags", {})),
         "title": node.get("title", ""),
         "saved_at": now_label(),
     }

@@ -812,6 +812,12 @@ class XianTuApp:
         self.game.path_history = d.get("path_history", [])
         self.game.attrs = d.get("attrs", {k: 20 for k in ATTR_NAMES})
         self.game.trait = d.get("trait", "")
+        self.game.artifacts = d.get("artifacts", [])
+        self.game.inventory = d.get("inventory", [])
+        self.game.affinity = d.get("affinity", {})
+        self.game.reputation = d.get("reputation", {"正道": 0, "魔道": 0, "散修": 0})
+        self.game.resources = d.get("resources", {"灵石": 0, "心魔": 0, "历练": 0, "丹药": 0, "轮回": 0})
+        self.game.flags = d.get("flags", {"rewarded_nodes": [], "insights": []})
         self.last_chapter = ""
         self.auto_save_file = ""
         self.render_current_node()
