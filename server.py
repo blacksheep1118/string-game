@@ -213,12 +213,17 @@ def api_choice():
     for attr, delta in effect.items():
         if attr in g.attrs:
             g.attrs[attr] += delta
+        elif attr in g.resources:
+            g.resources[attr] += delta
 
     # 检查要求
     req = choice.get("require", {})
     req_met = True
     if req:
-        req_met = all(g.attrs.get(k, 0) >= v for k, v in req.items())
+        req_met = all(
+            g.attrs.get(name, g.resources.get(name, 0)) >= value
+            for name, value in req.items()
+        )
         if req_met:
             req_desc = "、".join(f"{k}≥{v}" for k, v in req.items())
             feedback.append(f"判定通过：{req_desc}")
@@ -486,8 +491,8 @@ def check_and_return_achievements(g: Game, data: dict) -> list[dict]:
         "affinity": g.affinity,
         "is_ending": data.get("is_ending", False),
         "route": data.get("route", ""),
-        "rank": data.get("score_summary", {}).get("rank", "C"),
-        "score": data.get("score_summary", {}).get("score", 0),
+        "rank": (data.get("score_summary") or {}).get("rank", "C"),
+        "score": (data.get("score_summary") or {}).get("score", 0),
         "path_length": len(g.path_history),
         "ending_count": len(gallery),
         "insights": g.flags.get("insights", []),

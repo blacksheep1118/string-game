@@ -102,11 +102,22 @@
   },
   "sword_kill": {
     "title": "第五章 · 以杀证道",
-    "text": "你走上杀伐剑道，剑下不留活口。\n修为突飞猛进，但也心魔渐生。\n\n金丹大成之日，天劫轰然降临！\n",
+    "text": "你走上杀伐剑道，剑下不留活口。\n修为突飞猛进，但也心魔渐生。\n\n金丹大成之日，天劫轰然降临！你必须决定，究竟要以纯粹剑意渡劫，还是借魔气强行破境。\n",
     "choices": [
       {
-        "text": "面对天劫审判",
-        "next": "ch5_kill_1"
+        "text": "以剑意正面迎接天劫",
+        "next": "sword_kill_god",
+        "require": {
+          "精神": 25
+        },
+        "fail": "sword_kill_dark"
+      },
+      {
+        "text": "引魔气入体，强行冲破雷劫",
+        "next": "sword_kill_dark",
+        "effect": {
+          "精神": -3
+        }
       }
     ]
   },
@@ -116,11 +127,17 @@
     "choices": [
       {
         "text": "加入正道联盟，共抗魔道",
-        "next": "ch5_body_1"
+        "next": "sword_body_war",
+        "effect": {
+          "历练": 2
+        }
       },
       {
         "text": "独自云游，逍遥世外",
-        "next": "ch5_body_1"
+        "next": "sword_body_free",
+        "effect": {
+          "精神": 2
+        }
       }
     ]
   },
@@ -164,15 +181,21 @@
   },
   "pill_power": {
     "title": "第四章 · 丹成破境",
-    "text": "筑基丹出炉，丹香四溢！\n你服下丹药，一举踏入筑基期。\n\n但丹毒也开始在体内积聚，根基有些虚浮。\n",
+    "text": "筑基丹出炉，丹香四溢！\n你服下丹药，一举踏入筑基期。\n\n但丹毒也开始在体内积聚，根基有些虚浮。现在，你必须决定是稳住根基，还是用风险换取更快的突破。\n",
     "choices": [
       {
         "text": "暂停修炼，花三年巩固根基",
-        "next": "ch5_pill_power_1"
+        "next": "pill_caution",
+        "effect": {
+          "精神": 2
+        }
       },
       {
-        "text": "继续嗑药，速成金丹",
-        "next": "ch5_pill_power_1"
+        "text": "继续嗑药，赌一把速成金丹",
+        "next": "pill_rush",
+        "effect": {
+          "心魔": 2
+        }
       }
     ]
   },
@@ -196,11 +219,11 @@
     "choices": [
       {
         "text": "奋起反抗，拼死一搏",
-        "next": "ch2_bandits_1"
+        "next": "fight_bandits"
       },
       {
         "text": "转身逃入深山",
-        "next": "ch2_woods_1"
+        "next": "run_woods"
       }
     ]
   },
@@ -228,11 +251,11 @@
     "choices": [
       {
         "text": "深入探索上古洞府",
-        "next": "woods_explore"
+        "next": "ch2_woods_1"
       },
       {
         "text": "记下位置后先离开",
-        "next": "woods_leave"
+        "next": "ch3_leave_1"
       }
     ]
   },
@@ -266,11 +289,22 @@
   },
   "jade_study": {
     "title": "第三章 · 古玉之谜",
-    "text": "你日夜研究古玉，一日深夜，古玉忽然发光——\n一缕残魂从中飘出！\n\n「吾乃千年前的天魔老祖，被封印于此。」\n「你若助我脱困，我传你无上魔功！」\n",
+    "text": "你日夜研究古玉，一日深夜，古玉忽然发光——\n一缕残魂从中飘出！\n\n「吾乃千年前的天魔老祖，被封印于此。」\n「你若助我脱困，我传你无上魔功！」\n残魂的声音在诱惑与威胁之间摇摆，你必须决定如何处理这件危险遗物。\n",
     "choices": [
       {
-        "text": "仔细研究古玉",
-        "next": "ch3_jade_1"
+        "text": "尝试与残魂谈判，先探清底细",
+        "next": "jade_trust",
+        "require": {
+          "精神": 20
+        },
+        "fail": "ch3_jade_1"
+      },
+      {
+        "text": "布置封印，将古玉彻底焚毁",
+        "next": "jade_burn",
+        "effect": {
+          "悟性": 2
+        }
       }
     ]
   },
@@ -565,6 +599,14 @@
       {
         "text": "挺身而出，接下谷主重担",
         "next": "end_valley_master"
+      },
+      {
+        "text": "与道侣结伴，尝试阴阳共修",
+        "next": "dual_cultivation_1",
+        "require": {
+          "魅力": 30
+        },
+        "fail": "end_pill_hermit"
       }
     ]
   },
@@ -588,7 +630,21 @@
     "choices": [
       {
         "text": "以实力说话，正面迎战",
-        "next": "ch4_sect_standoff"
+        "next": "ch4_sect_standoff",
+        "effect": {
+          "根骨": 2
+        }
+      },
+      {
+        "text": "先调查叛变长老的证据",
+        "next": "ch5_sect_leader_1",
+        "require": {
+          "悟性": 25
+        },
+        "fail": "ch4_sect_standoff",
+        "effect": {
+          "悟性": 1
+        }
       }
     ]
   },
@@ -643,6 +699,14 @@
         "effect": {
           "悟性": 2
         }
+      },
+      {
+        "text": "以阵法守护被逐出的同门",
+        "next": "formation_path_1",
+        "require": {
+          "悟性": 25
+        },
+        "fail": "ch6_neutral_1"
       }
     ]
   },
@@ -1372,7 +1436,17 @@
       },
       {
         "text": "严格按照师父说的步骤操作",
-        "next": "ch3_pill_3"
+        "next": "ch3_pill_3",
+        "effect": {
+          "精神": 2
+        }
+      },
+      {
+        "text": "尝试改良丹方，承担失败风险",
+        "next": "ch3_pill_4",
+        "effect": {
+          "悟性": 2
+        }
       }
     ]
   },
@@ -1471,9 +1545,30 @@
     ]
   },
   "ch3_pill_4": {
-    "title": "缺失节点",
-    "text": "此节点不可达。",
-    "choices": []
+    "title": "第二章 · 炉火失控",
+    "text": "你尝试改良丹方，加入了一味尚未验证的青冥草。药香骤然变得辛烈，炉火也随之窜起三尺高。\n师父没有立刻出手，只提醒你：\n「炼丹不是把药材堆在一起。敢于试错是悟性，知道何时收手才是丹心。」\n你必须在炉火彻底失控前做出决定。",
+    "choices": [
+      {
+        "text": "立即收火，保住丹炉与药材",
+        "next": "ch3_pill_3",
+        "effect": {
+          "精神": 2,
+          "丹药": 1
+        }
+      },
+      {
+        "text": "继续推演药性，赌一炉新丹",
+        "next": "pill_choice_branch",
+        "require": {
+          "悟性": 24
+        },
+        "fail": "end_deviation",
+        "effect": {
+          "悟性": 1,
+          "心魔": 1
+        }
+      }
+    ]
   },
   "ch3_jade_1": {
     "title": "第二章 · 古玉之秘",
@@ -1869,12 +1964,18 @@
     "text": "轰！石桥崩塌，妖兽摔入陷阱！\n尖锐的木桩刺穿了它的腹部——它挣扎了几下，不动了。\n你站在陷阱边缘，大口喘气，浑身是汗。\n",
     "choices": [
       {
-        "text": "确认妖兽已死，取出妖丹",
-        "next": "ch5_absorb_1"
+        "text": "确认妖兽已死，炼化妖丹",
+        "next": "absorb_core",
+        "effect": {
+          "根骨": 2
+        }
       },
       {
-        "text": "先休息一下，再处理妖兽尸体",
-        "next": "ch5_give_1"
+        "text": "先休息一下，再把妖丹交给师父",
+        "next": "give_core",
+        "effect": {
+          "精神": 2
+        }
       }
     ]
   },
@@ -2526,6 +2627,14 @@
     "text": "你冲入叛军之中，一剑斩翻三名叛变弟子。\n但叛变长老的实力远超你的预期——\n他已经是金丹后期，而你只是筑基。\n",
     "choices": [
       {
+        "text": "研究门中流传的古阵图，尝试守护宗门",
+        "next": "formation_path_1",
+        "require": {
+          "悟性": 25
+        },
+        "fail": "ch6_sect_leader_1"
+      },
+      {
         "text": "燃烧精血，强行提升战力",
         "next": "ch6_sect_leader_2"
       },
@@ -2599,11 +2708,16 @@
     "text": "你的修为终于追上来了。但继续猛进还是稳扎稳打？\n白眉道人说：「你这年纪，稳扎稳打或许走得更远。」\n「但如果想追上前面的天才，必须冒险。」\n",
     "choices": [
       {
-        "text": "全力冲刺，追赶失去的时间",
-        "next": "ch7_home_late_arrive"
+        "text": "在古籍中寻找时间异象的线索",
+        "next": "time_paradox_1",
+        "require": {
+          "悟性": 35,
+          "精神": 35
+        },
+        "fail": "ch7_home_late_arrive"
       },
       {
-        "text": "把每一步都走扎实",
+        "text": "继续稳扎稳打",
         "next": "ch7_home_late_arrive"
       }
     ]
@@ -3986,6 +4100,17 @@
         "next": "ch6_rich_life",
         "effect": {
           "魅力": 4
+        }
+      },
+      {
+        "text": "资助炼器师，亲自学习炼器",
+        "next": "refiner_path_1",
+        "require": {
+          "根骨": 25
+        },
+        "fail": "ch6_rich_life",
+        "effect": {
+          "灵石": -5
         }
       }
     ]

@@ -742,11 +742,16 @@ class XianTuApp:
         for attr, delta in effect.items():
             if attr in self.game.attrs:
                 self.game.attrs[attr] += delta
+            elif attr in self.game.resources:
+                self.game.resources[attr] += delta
 
         # 属性判定
         req = choice.get("require", {})
         if req:
-            met = all(self.game.attrs.get(k, 0) >= v for k, v in req.items())
+            met = all(
+                self.game.attrs.get(name, self.game.resources.get(name, 0)) >= value
+                for name, value in req.items()
+            )
             if not met and "fail" in choice:
                 self.game.current_node = choice["fail"]
                 self.render_current_node()

@@ -8,7 +8,14 @@ import os
 from typing import Any
 
 
-def validate_nodes(nodes: dict[str, dict[str, Any]], attr_names: list[str] | tuple[str, ...] = ()) -> list[str]:
+DEFAULT_RESOURCE_NAMES = ("灵石", "心魔", "历练", "丹药", "轮回")
+
+
+def validate_nodes(
+    nodes: dict[str, dict[str, Any]],
+    attr_names: list[str] | tuple[str, ...] = (),
+    resource_names: list[str] | tuple[str, ...] = DEFAULT_RESOURCE_NAMES,
+) -> list[str]:
     errors: list[str] = []
     if "start" not in nodes:
         errors.append("缺少 start 节点")
@@ -44,7 +51,7 @@ def validate_nodes(nodes: dict[str, dict[str, Any]], attr_names: list[str] | tup
                     errors.append(f"{prefix}.{attr_group}: 必须是对象")
                     continue
                 for attr, value in values.items():
-                    if attr_names and attr not in attr_names:
+                    if attr_names and attr not in attr_names and attr not in resource_names:
                         errors.append(f"{prefix}.{attr_group}: 未知属性 {attr}")
                     if not isinstance(value, int):
                         errors.append(f"{prefix}.{attr_group}.{attr}: 必须是整数")

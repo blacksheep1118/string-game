@@ -3694,15 +3694,20 @@ class Game:
             choice = node["choices"][choice_idx]
             self.path_history.append(self.current_node)
 
-            # 应用属性加成
+            # 应用属性与资源效果
             effect = choice.get("effect", {})
-            for attr, delta in effect.items():
-                if attr in self.attrs:
-                    self.attrs[attr] += delta
+            for name, delta in effect.items():
+                if name in self.attrs:
+                    self.attrs[name] += delta
+                elif name in self.resources:
+                    self.resources[name] += delta
 
             req = choice.get("require", {})
             if req:
-                met = all(self.attrs.get(k, 0) >= v for k, v in req.items())
+                met = all(
+                    self.attrs.get(name, self.resources.get(name, 0)) >= value
+                    for name, value in req.items()
+                )
                 if not met and "fail" in choice:
                     self.current_node = choice["fail"]
                     return
