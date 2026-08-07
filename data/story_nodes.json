@@ -72,6 +72,13 @@
       {
         "text": "先处理伤口，再思考下一步",
         "next": "ch4_fight_1"
+      },
+      {
+        "text": "战后感悟剑意，闭关修炼",
+        "next": "sword_enlightenment_1",
+        "effect": {
+          "悟性": 3
+        }
       }
     ]
   },
@@ -82,6 +89,14 @@
       {
         "text": "先设陷阱擒获妖兽",
         "next": "ch4_tactic_1"
+      },
+      {
+        "text": "战后师父传授剑心",
+        "next": "give_core",
+        "require": {
+          "根骨": 30
+        },
+        "fail": "ch4_sword_continue"
       }
     ]
   },
@@ -616,12 +631,18 @@
     "text": "你两不相帮，却被双方视为墙头草。\n最终你被逐出玄天宗，流落江湖。\n\n但你不是轻易认输的人——\n",
     "choices": [
       {
-        "text": "在孤峰独自修炼，自成一派",
-        "next": "ch5_sect_neutral_1"
+        "text": "继续保持中立立场",
+        "next": "sect_neutral_expand_1",
+        "effect": {
+          "精神": 2
+        }
       },
       {
-        "text": "十年后以碾压之势重返宗门",
-        "next": "ch5_sect_neutral_1"
+        "text": "低调修炼，避开纷争",
+        "next": "ch6_neutral_1",
+        "effect": {
+          "悟性": 2
+        }
       }
     ]
   },
@@ -1230,6 +1251,14 @@
       {
         "text": "被那颗珠子深深吸引",
         "next": "ch2_woods_4"
+      },
+      {
+        "text": "发现一只受伤的灵兽幼崽",
+        "next": "beast_tamer_path_1",
+        "require": {
+          "魅力": 25
+        },
+        "fail": "ch2_woods_4"
       }
     ]
   },
@@ -1353,7 +1382,7 @@
     "choices": [
       {
         "text": "筑基丹——提升修为，加速突破",
-        "next": "ch4_pill_power_1",
+        "next": "pill_choice_branch",
         "require": {
           "悟性": 20
         },
@@ -1563,7 +1592,7 @@
     "choices": [
       {
         "text": "用财富换取修炼丹药和功法",
-        "next": "jade_buy"
+        "next": "ch4_rich_expand"
       },
       {
         "text": "婉拒，满足于现在的生活",
@@ -2188,6 +2217,13 @@
       {
         "text": "想反悔——但已经太迟了",
         "next": "ch5_jade_trust_2"
+      },
+      {
+        "text": "深入修炼魔功，追求力量",
+        "next": "demon_path_1",
+        "effect": {
+          "根骨": 3
+        }
       }
     ]
   },
@@ -2514,16 +2550,19 @@
     ]
   },
   "ch6_neutral_1": {
-    "title": "第六章 · 孤峰岁月",
-    "text": "一座无名孤峰，一间茅草屋。\n你在这里独自修炼了二十年。\n没有丹药，没有师承——全靠自己摸索。\n",
+    "title": "第六章 · 中立之路",
+    "text": "你远离宗门权力斗争，专心修炼。\n十年后，你的修为已超过大部分长老。\n掌门和长老都对你礼遇有加，但你依然不愿站队。",
     "choices": [
       {
-        "text": "日出而作，日落而修",
-        "next": "ch6_neutral_end"
+        "text": "保持中立，成为宗门定海神针",
+        "next": "end_sect_neutral_master",
+        "effect": {
+          "精神": 5
+        }
       },
       {
-        "text": "偶尔下山历练，增长见识",
-        "next": "ch6_neutral_end"
+        "text": "离开宗门，云游天下",
+        "next": "end_wanderer_free"
       }
     ]
   },
@@ -3598,6 +3637,10 @@
           "根骨": 5,
           "悟性": 5
         }
+      },
+      {
+        "text": "将战斗丹道发扬光大",
+        "next": "end_pill_warrior"
       }
     ]
   },
@@ -3889,6 +3932,310 @@
   "sect_expelled": {
     "title": "【结局·C】逐出师门",
     "text": "你在派系斗争中站错了队，\n被宗门除名，逐出山门。\n你带着遗憾离开，余生流浪修炼。\n\n评级：C级 — 政治斗争，不慎出局。",
+    "choices": []
+  },
+  "pill_choice_branch": {
+    "title": "第三章 · 丹道抉择",
+    "text": "师父将三份古老丹方摆在你面前：\n筑基丹——提升修为的正统丹药；\n毒丹——禁忌但强大的攻伐之术；\n战斗丹——独特的战斗辅助流派。",
+    "choices": [
+      {
+        "text": "选择筑基丹，走正统丹道",
+        "next": "ch4_pill_power_1"
+      },
+      {
+        "text": "研究毒丹，掌握禁忌之术",
+        "next": "pill_poison_path_1",
+        "require": {
+          "精神": 30
+        },
+        "fail": "ch4_pill_power_1"
+      },
+      {
+        "text": "开创战斗丹道，另辟蹊径",
+        "next": "pill_battle_style_1",
+        "require": {
+          "悟性": 30
+        },
+        "fail": "ch4_pill_power_1"
+      }
+    ]
+  },
+  "end_sect_neutral_master": {
+    "title": "【结局·A】超然物外",
+    "text": "你始终保持中立，不参与派系之争。\n你的实力和德行让所有人敬佩。\n最终成为宗门最受尊敬的长老，\n调解纷争，守护正道。\n\n评级：A级 — 中立不倚，德高望重！",
+    "choices": []
+  },
+  "end_wanderer_free": {
+    "title": "【结局·A】逍遥散仙",
+    "text": "你离开宗门，游历天下。\n你的足迹遍布修仙界每一个角落，\n结交各路英雄豪杰，见识无数奇景。\n世人称你为「逍遥散仙」，自在潇洒。\n\n评级：A级 — 不受束缚，逍遥自在！",
+    "choices": []
+  },
+  "ch4_rich_expand": {
+    "title": "第四章 · 商业帝国",
+    "text": "你的生意越做越大，从丝绸到灵石，从凡间到修仙界。\n你雇佣护卫，建立商队，甚至与修仙宗门做起了生意。\n财富让你接触到了修仙界的边缘。",
+    "choices": [
+      {
+        "text": "用财富换取修炼资源",
+        "next": "jade_buy",
+        "effect": {
+          "魅力": 3
+        }
+      },
+      {
+        "text": "继续扩大商业版图",
+        "next": "ch6_rich_life",
+        "effect": {
+          "魅力": 4
+        }
+      }
+    ]
+  },
+  "ch4_sword_continue": {
+    "title": "第四章 · 剑道精进",
+    "text": "虽然这次战斗没有得到剑心传承，\n但你的剑术在实战中大有长进。\n师父说：「不要急，剑心需要时机。」",
+    "choices": [
+      {
+        "text": "继续修炼剑术",
+        "next": "sword_enlightenment_1",
+        "effect": {
+          "根骨": 2
+        }
+      }
+    ]
+  },
+  "time_paradox_1": {
+    "title": "第七章 · 时间异象",
+    "text": "在一次修炼中，你意外触碰到了时间法则的边缘。\n眼前的景象开始倒流——你看到了过去的自己，\n看到了每一个选择的分岔点。\n这是时间修士才能触碰的禁忌领域。",
+    "choices": [
+      {
+        "text": "尝试掌握时间之力",
+        "next": "time_paradox_2",
+        "require": {
+          "悟性": 50,
+          "精神": 50
+        },
+        "fail": "end_time_lost"
+      },
+      {
+        "text": "立刻断开联系，这太危险了",
+        "next": "end_time_retreat"
+      }
+    ]
+  },
+  "time_paradox_2": {
+    "title": "第七章 · 时间长河",
+    "text": "你成功进入时间长河。\n你看到了无数个平行的自己，每一个都在不同的命运线上。\n你意识到——你可以改变过去，重写命运。",
+    "choices": [
+      {
+        "text": "回到过去，改变关键选择",
+        "next": "end_time_master",
+        "effect": {
+          "悟性": 10
+        }
+      },
+      {
+        "text": "不干涉时间，只观察和学习",
+        "next": "end_time_observer",
+        "effect": {
+          "精神": 10
+        }
+      }
+    ]
+  },
+  "dual_cultivation_1": {
+    "title": "第五章 · 道侣",
+    "text": "你在修炼中遇到了一位志同道合的修士。\n你们惺惺相惜，决定结为道侣，共修大道。\n双修之法可让修为倍增，但也需要绝对的信任。",
+    "choices": [
+      {
+        "text": "与道侣双修，互相扶持",
+        "next": "dual_cultivation_2",
+        "require": {
+          "魅力": 40
+        },
+        "fail": "end_cultivation_betrayed"
+      }
+    ]
+  },
+  "dual_cultivation_2": {
+    "title": "第六章 · 天生一对",
+    "text": "你与道侣心意相通，修为突飞猛进。\n两人的灵气相互交融，竟形成了罕见的「阴阳道体」。\n这种体质，千年难遇。",
+    "choices": [
+      {
+        "text": "携手飞升，双双成仙",
+        "next": "end_dual_ascension",
+        "effect": {
+          "悟性": 8,
+          "魅力": 8
+        }
+      }
+    ]
+  },
+  "refiner_path_1": {
+    "title": "第四章 · 炼器初窥",
+    "text": "你在古籍中发现了炼器之法。\n与丹修类似，炼器师同样稀少珍贵。\n你决定尝试炼制自己的第一件法器。",
+    "choices": [
+      {
+        "text": "炼制飞剑，攻伐利器",
+        "next": "refiner_path_2a",
+        "require": {
+          "根骨": 30
+        },
+        "fail": "refiner_path_2b"
+      },
+      {
+        "text": "炼制护甲，防御法宝",
+        "next": "refiner_path_2c",
+        "require": {
+          "精神": 30
+        },
+        "fail": "refiner_path_2b"
+      }
+    ]
+  },
+  "refiner_path_2a": {
+    "title": "第四章 · 飞剑初成",
+    "text": "经过七七四十九天的锻造，\n你的第一柄飞剑出炉——虽然只是下品法器，\n但已能御剑飞行。你的名字开始在炼器界流传。",
+    "choices": [
+      {
+        "text": "继续钻研炼器之术",
+        "next": "refiner_path_3",
+        "effect": {
+          "悟性": 4
+        }
+      }
+    ]
+  },
+  "refiner_path_2b": {
+    "title": "第四章 · 炼器失败",
+    "text": "第一次炼器以失败告终。\n炉子爆炸，材料尽毁。\n你意识到炼器比想象中更难。",
+    "choices": [
+      {
+        "text": "不甘放弃，继续尝试",
+        "next": "refiner_path_3",
+        "effect": {
+          "精神": 3
+        }
+      },
+      {
+        "text": "放弃炼器，专注其他",
+        "next": "end_refiner_abandoned"
+      }
+    ]
+  },
+  "refiner_path_2c": {
+    "title": "第四章 · 护甲初成",
+    "text": "你炼制的护甲虽然笨重，\n但防御力惊人。你穿上它与妖兽战斗，\n刀剑不入，毫发无伤。",
+    "choices": [
+      {
+        "text": "继续炼制防御法宝",
+        "next": "refiner_path_3",
+        "effect": {
+          "根骨": 4
+        }
+      }
+    ]
+  },
+  "refiner_path_3": {
+    "title": "第五章 · 炼器宗师",
+    "text": "十年磨一剑。你的炼器术已臻化境。\n你炼制的法宝供不应求，\n各大宗门都想聘你为客卿长老。",
+    "choices": [
+      {
+        "text": "开设炼器坊，广收门徒",
+        "next": "end_refiner_master",
+        "effect": {
+          "魅力": 5
+        }
+      },
+      {
+        "text": "只为自己炼器，追求极致",
+        "next": "end_refiner_perfectionist",
+        "effect": {
+          "悟性": 5
+        }
+      }
+    ]
+  },
+  "formation_path_1": {
+    "title": "第四章 · 阵法奥秘",
+    "text": "你对各种阵法产生了浓厚兴趣。\n从简单的困阵到复杂的杀阵，\n你开始系统学习阵法之道。",
+    "choices": [
+      {
+        "text": "研究攻击型杀阵",
+        "next": "formation_path_2",
+        "effect": {
+          "悟性": 3
+        }
+      },
+      {
+        "text": "研究防御型护阵",
+        "next": "formation_path_2",
+        "effect": {
+          "精神": 3
+        }
+      }
+    ]
+  },
+  "formation_path_2": {
+    "title": "第五章 · 阵法大师",
+    "text": "你能布置方圆百里的超大型阵法。\n一人之力，守护一城。\n你被誉为「阵法仙师」，受万人敬仰。",
+    "choices": [
+      {
+        "text": "继续研究更强大的阵法",
+        "next": "end_formation_master",
+        "effect": {
+          "悟性": 8
+        }
+      }
+    ]
+  },
+  "end_time_lost": {
+    "title": "【结局·D】迷失时间",
+    "text": "你的意识在时间长河中迷失，\n永远无法回到现实。\n你的身体成为空壳，精神游荡在无尽的时间线中。\n\n评级：D级 — 触碰禁忌，自食其果。",
+    "choices": []
+  },
+  "end_time_retreat": {
+    "title": "【结局·B】明智选择",
+    "text": "你明智地拒绝了时间法则的诱惑。\n虽然失去了成为时间修士的机会，\n但你保持了道心的纯粹，继续稳健修炼。\n\n评级：B级 — 知进退，懂取舍。",
+    "choices": []
+  },
+  "end_time_master": {
+    "title": "【结局·SS】时间主宰",
+    "text": "你成为传说中的时间修士。\n你可以看到过去，预知未来，\n甚至能在有限范围内改变因果。\n你超越了寿命的限制，成为永恒的存在。\n\n评级：SS级 — 掌控时间，永恒不朽！",
+    "choices": []
+  },
+  "end_time_observer": {
+    "title": "【结局·S】时间见证者",
+    "text": "你选择不干涉时间，只观察和记录。\n你见证了无数个平行世界的兴衰，\n获得了无上的智慧。\n你成为修仙界的史官，记录万古。\n\n评级：S级 — 见证历史，智慧超凡！",
+    "choices": []
+  },
+  "end_cultivation_betrayed": {
+    "title": "【结局·D】道侣背叛",
+    "text": "你对道侣的信任被利用。\n在双修的关键时刻，对方反噬你的真元。\n你失去了所有修为，沦为废人。\n\n评级：D级 — 识人不明，悔恨终生。",
+    "choices": []
+  },
+  "end_dual_ascension": {
+    "title": "【结局·SS】双仙飞升",
+    "text": "你与道侣携手渡劫，双双飞升。\n阴阳道体让你们在仙界也是传奇存在。\n世人传颂你们的爱情故事千年不息。\n\n评级：SS级 — 比翼双飞，羡煞天下！",
+    "choices": []
+  },
+  "end_refiner_master": {
+    "title": "【结局·S】炼器宗师",
+    "text": "你的炼器坊门庭若市，弟子遍天下。\n你炼制的法宝成为传世珍品，\n每一件都价值连城。\n你被尊为当代炼器第一人。\n\n评级：S级 — 炼器大成，名扬天下！",
+    "choices": []
+  },
+  "end_refiner_perfectionist": {
+    "title": "【结局·SS】神器之父",
+    "text": "你用一生只炼制了一件法宝，\n但那是一件真正的神器——可镇压气运，改天换地。\n你的名字与那件神器一起，永载史册。\n\n评级：SS级 — 一生一器，登峰造极！",
+    "choices": []
+  },
+  "end_refiner_abandoned": {
+    "title": "【结局·C】半途而废",
+    "text": "你放弃了炼器之路，\n转而专注其他修行。\n虽然最终有所成就，\n但始终对当初的放弃耿耿于怀。\n\n评级：C级 — 未能坚持，遗憾终生。",
+    "choices": []
+  },
+  "end_formation_master": {
+    "title": "【结局·S】阵法仙师",
+    "text": "你的阵法造诣达到巅峰。\n你布置的护城大阵守护了无数生灵，\n你布置的杀阵击退了魔道大军。\n你被尊为「阵仙」，功德无量。\n\n评级：S级 — 阵法通神，守护苍生！",
     "choices": []
   }
 }
