@@ -607,4 +607,364 @@ body {
   transition: all 0.3s;
   -webkit-tap-highlight-color: transparent;
 }
+
+/* ========== 浮动文字容器 ========== */
+.floating-text-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 100;
+}
+
+.floating-text {
+  position: absolute;
+  font-weight: 700;
+  font-size: 1.2em;
+  animation: floatUp 2s ease-out forwards;
+  pointer-events: none;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+}
+
+.floating-text.attr-change {
+  font-size: 1.4em;
+}
+
+.floating-text.positive {
+  color: #6b8e6b;
+}
+
+.floating-text.negative {
+  color: #8b3a3a;
+}
+
+.floating-text.pivotal-node {
+  color: var(--gold);
+  font-size: 1.8em;
+  text-shadow: 0 0 20px rgba(201,169,110,0.8);
+}
+
+.floating-text.achievement-unlock {
+  color: var(--gold-light);
+  font-size: 1.5em;
+  animation: floatUpAchievement 3s ease-out forwards;
+}
+
+@keyframes floatUp {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-100px) scale(1.3);
+    opacity: 0;
+  }
+}
+
+@keyframes floatUpAchievement {
+  0% {
+    transform: translateY(0) scale(0.5);
+    opacity: 0;
+  }
+  20% {
+    transform: translateY(-50px) scale(1.2);
+    opacity: 1;
+  }
+  80% {
+    transform: translateY(-80px) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-120px) scale(0.8);
+    opacity: 0;
+  }
+}
+
+/* ========== 屏幕震动效果 ========== */
+@keyframes shake-light {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
+
+@keyframes shake-medium {
+  0%, 100% { transform: translate(0, 0); }
+  10% { transform: translate(-5px, 2px); }
+  20% { transform: translate(5px, -2px); }
+  30% { transform: translate(-5px, -2px); }
+  40% { transform: translate(5px, 2px); }
+  50% { transform: translate(-5px, 2px); }
+  60% { transform: translate(5px, -2px); }
+  70% { transform: translate(-5px, -2px); }
+  80% { transform: translate(5px, 2px); }
+  90% { transform: translate(-5px, 2px); }
+}
+
+@keyframes shake-heavy {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  10% { transform: translate(-8px, 4px) rotate(-1deg); }
+  20% { transform: translate(8px, -4px) rotate(1deg); }
+  30% { transform: translate(-8px, -4px) rotate(-1deg); }
+  40% { transform: translate(8px, 4px) rotate(1deg); }
+  50% { transform: translate(-8px, 4px) rotate(-1deg); }
+  60% { transform: translate(8px, -4px) rotate(1deg); }
+  70% { transform: translate(-8px, -4px) rotate(-1deg); }
+  80% { transform: translate(8px, 4px) rotate(1deg); }
+  90% { transform: translate(-8px, 4px) rotate(-1deg); }
+}
+
+.screen-shake-light {
+  animation: shake-light 0.5s;
+}
+
+.screen-shake-medium {
+  animation: shake-medium 0.5s;
+}
+
+.screen-shake-heavy {
+  animation: shake-heavy 0.5s;
+}
+
+/* ========== 屏幕闪光效果 ========== */
+.screen-flash {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 999;
+  animation: flashEffect 0.3s ease-out;
+}
+
+@keyframes flashEffect {
+  0% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ========== 命运转折点标记 ========== */
+.destiny-pivot {
+  animation: destinyPulse 2s ease-in-out;
+  box-shadow: 0 0 30px rgba(201,169,110,0.5);
+}
+
+@keyframes destinyPulse {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(201,169,110,0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(201,169,110,0.8);
+  }
+}
+
+/* ========== 选择按钮粒子效果 ========== */
+.choice-particle {
+  position: fixed;
+  width: 4px;
+  height: 4px;
+  background: var(--gold);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 50;
+  animation: particleFade 1s ease-out forwards;
+}
+
+@keyframes particleFade {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--dx, 20px), var(--dy, -40px)) scale(0);
+    opacity: 0;
+  }
+}
+
+/* ========== 淡入淡出效果 ========== */
+.fade-out {
+  animation: fadeOut 0.3s ease-out forwards;
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in forwards;
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ========== 章节过渡增强 ========== */
+.chapter-transition .chapter-title {
+  font-size: 3em;
+  color: var(--gold);
+  font-weight: 700;
+  text-align: center;
+  animation: chapterTitleAppear 1.5s ease-out;
+  text-shadow: 0 0 30px rgba(201,169,110,0.6);
+}
+
+@keyframes chapterTitleAppear {
+  0% {
+    transform: scale(0.3) rotateY(90deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1) rotateY(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotateY(0deg);
+    opacity: 1;
+  }
+}
+
+/* ========== 成就弹窗 ========== */
+.achievement-popup {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  background: linear-gradient(135deg, rgba(201,169,110,0.95), rgba(160,82,45,0.95));
+  border: 2px solid var(--gold);
+  border-radius: 8px;
+  padding: 15px 20px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  min-width: 300px;
+  box-shadow: 0 4px 20px rgba(201,169,110,0.5);
+  animation: achievementSlideIn 0.5s ease-out;
+  pointer-events: none;
+}
+
+.achievement-popup .achievement-icon {
+  font-size: 2.5em;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+}
+
+.achievement-popup .achievement-info {
+  flex: 1;
+}
+
+.achievement-popup .achievement-name {
+  font-size: 1.1em;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.achievement-popup .achievement-desc {
+  font-size: 0.9em;
+  color: rgba(255,255,255,0.9);
+}
+
+@keyframes achievementSlideIn {
+  from {
+    transform: translateX(-50%) translateY(-50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* ========== 成就模态框 ========== */
+.achievements-modal {
+  max-width: 800px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.achievement-stats {
+  display: flex;
+  justify-content: space-around;
+  gap: 15px;
+  margin: 15px 0;
+  padding: 15px;
+  background: rgba(0,0,0,0.3);
+  border-radius: 6px;
+  flex-wrap: wrap;
+}
+
+.achievement-stats span {
+  font-size: 0.95em;
+  color: var(--gold);
+}
+
+.achievement-category {
+  margin: 20px 0;
+}
+
+.achievement-category h3 {
+  color: var(--gold);
+  font-size: 1.2em;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 5px;
+}
+
+.achievement-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.achievement-card {
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px;
+  text-align: center;
+  transition: all 0.3s;
+}
+
+.achievement-card:hover {
+  border-color: var(--gold);
+  transform: translateY(-2px);
+}
+
+.achievement-card.locked {
+  opacity: 0.5;
+  filter: grayscale(0.8);
+}
+
+.achievement-card .achievement-icon {
+  font-size: 2em;
+  margin-bottom: 8px;
+}
+
+.achievement-card .achievement-name {
+  font-weight: 700;
+  color: var(--gold);
+  font-size: 0.95em;
+  margin-bottom: 4px;
+}
+
+.achievement-card .achievement-desc {
+  font-size: 0.85em;
+  color: var(--text-dim);
+  line-height: 1.3;
+}
 #audio-toggle:hover { border-color: var(--gold); color: var(--gold); }

@@ -1,0 +1,510 @@
+{
+  "achievements": [
+    {
+      "id": "first_ending",
+      "name": "初入仙途",
+      "desc": "达成第一个结局",
+      "icon": "🌟",
+      "category": "进度",
+      "trigger": {
+        "type": "ending_count",
+        "count": 1
+      }
+    },
+    {
+      "id": "collector_5",
+      "name": "命运探索者",
+      "desc": "解锁5个不同结局",
+      "icon": "📜",
+      "category": "进度",
+      "trigger": {
+        "type": "ending_count",
+        "count": 5
+      }
+    },
+    {
+      "id": "collector_10",
+      "name": "命运织者",
+      "desc": "解锁10个不同结局",
+      "icon": "🎭",
+      "category": "进度",
+      "trigger": {
+        "type": "ending_count",
+        "count": 10
+      }
+    },
+    {
+      "id": "collector_20",
+      "name": "万象归一",
+      "desc": "解锁20个不同结局",
+      "icon": "⭐",
+      "category": "进度",
+      "trigger": {
+        "type": "ending_count",
+        "count": 20
+      }
+    },
+    {
+      "id": "all_endings",
+      "name": "天命通达",
+      "desc": "解锁全部结局",
+      "icon": "👑",
+      "category": "进度",
+      "trigger": {
+        "type": "ending_count",
+        "count": 43
+      }
+    },
+    {
+      "id": "sword_master",
+      "name": "剑道宗师",
+      "desc": "达成任意剑修SS级结局",
+      "icon": "⚔️",
+      "category": "路线",
+      "trigger": {
+        "type": "ending_rank",
+        "route": "剑修",
+        "rank": "SS"
+      }
+    },
+    {
+      "id": "pill_master",
+      "name": "丹道至尊",
+      "desc": "达成任意丹修SS级结局",
+      "icon": "🔮",
+      "category": "路线",
+      "trigger": {
+        "type": "ending_rank",
+        "route": "丹修",
+        "rank": "SS"
+      }
+    },
+    {
+      "id": "sect_elder",
+      "name": "宗门长老",
+      "desc": "达成任意宗门SS级结局",
+      "icon": "🏛️",
+      "category": "路线",
+      "trigger": {
+        "type": "ending_rank",
+        "route": "宗门",
+        "rank": "SS"
+      }
+    },
+    {
+      "id": "wanderer_sage",
+      "name": "逍遥真仙",
+      "desc": "达成任意散修SS级结局",
+      "icon": "🌙",
+      "category": "路线",
+      "trigger": {
+        "type": "ending_rank",
+        "route": "散修",
+        "rank": "SS"
+      }
+    },
+    {
+      "id": "demon_path",
+      "name": "魔道枭雄",
+      "desc": "达成古玉魔道结局",
+      "icon": "😈",
+      "category": "路线",
+      "trigger": {
+        "type": "ending_id",
+        "ending": "end_possessed"
+      }
+    },
+    {
+      "id": "merchant_king",
+      "name": "商道巨擘",
+      "desc": "达成商道结局",
+      "icon": "💰",
+      "category": "路线",
+      "trigger": {
+        "type": "ending_id",
+        "ending": "end_rich"
+      }
+    },
+    {
+      "id": "perfect_start",
+      "name": "完美开局",
+      "desc": "选择词条后所有属性≥30",
+      "icon": "✨",
+      "category": "属性",
+      "trigger": {
+        "type": "attrs_all_above",
+        "value": 30,
+        "node": "start"
+      }
+    },
+    {
+      "id": "extreme_luck",
+      "name": "气运无双",
+      "desc": "幸运属性达到50",
+      "icon": "🍀",
+      "category": "属性",
+      "trigger": {
+        "type": "attr_reach",
+        "attr": "幸运",
+        "value": 50
+      }
+    },
+    {
+      "id": "iron_body",
+      "name": "金刚不坏",
+      "desc": "根骨属性达到60",
+      "icon": "💪",
+      "category": "属性",
+      "trigger": {
+        "type": "attr_reach",
+        "attr": "根骨",
+        "value": 60
+      }
+    },
+    {
+      "id": "charm_master",
+      "name": "倾国倾城",
+      "desc": "魅力属性达到50",
+      "icon": "💖",
+      "category": "属性",
+      "trigger": {
+        "type": "attr_reach",
+        "attr": "魅力",
+        "value": 50
+      }
+    },
+    {
+      "id": "wisdom_peak",
+      "name": "悟道通天",
+      "desc": "悟性属性达到60",
+      "icon": "🧠",
+      "category": "属性",
+      "trigger": {
+        "type": "attr_reach",
+        "attr": "悟性",
+        "value": 60
+      }
+    },
+    {
+      "id": "steel_mind",
+      "name": "心如止水",
+      "desc": "精神属性达到55",
+      "icon": "🧘",
+      "category": "属性",
+      "trigger": {
+        "type": "attr_reach",
+        "attr": "精神",
+        "value": 55
+      }
+    },
+    {
+      "id": "balanced_growth",
+      "name": "五行平衡",
+      "desc": "所有属性差值不超过10",
+      "icon": "☯️",
+      "category": "属性",
+      "trigger": {
+        "type": "attrs_balanced",
+        "max_diff": 10
+      }
+    },
+    {
+      "id": "specialist",
+      "name": "专精一道",
+      "desc": "某个属性比其他所有属性高20以上",
+      "icon": "🎯",
+      "category": "属性",
+      "trigger": {
+        "type": "attrs_specialist",
+        "diff": 20
+      }
+    },
+    {
+      "id": "fast_clear",
+      "name": "速通者",
+      "desc": "20步内达成结局",
+      "icon": "⚡",
+      "category": "挑战",
+      "trigger": {
+        "type": "path_length",
+        "max": 20
+      }
+    },
+    {
+      "id": "explorer",
+      "name": "探索者",
+      "desc": "60步以上达成结局",
+      "icon": "🗺️",
+      "category": "挑战",
+      "trigger": {
+        "type": "path_length",
+        "min": 60
+      }
+    },
+    {
+      "id": "rich_man",
+      "name": "财富自由",
+      "desc": "累积灵石达到100",
+      "icon": "💎",
+      "category": "资源",
+      "trigger": {
+        "type": "resource_reach",
+        "resource": "灵石",
+        "value": 100
+      }
+    },
+    {
+      "id": "pill_hoarder",
+      "name": "丹药大师",
+      "desc": "累积丹药达到30",
+      "icon": "💊",
+      "category": "资源",
+      "trigger": {
+        "type": "resource_reach",
+        "resource": "丹药",
+        "value": 30
+      }
+    },
+    {
+      "id": "veteran",
+      "name": "江湖老手",
+      "desc": "历练值达到50",
+      "icon": "📚",
+      "category": "资源",
+      "trigger": {
+        "type": "resource_reach",
+        "resource": "历练",
+        "value": 50
+      }
+    },
+    {
+      "id": "mind_demon_survivor",
+      "name": "心魔克星",
+      "desc": "心魔≥10时达成S级以上结局",
+      "icon": "👹",
+      "category": "挑战",
+      "trigger": {
+        "type": "ending_with_resource",
+        "resource": "心魔",
+        "min_value": 10,
+        "min_rank": "S"
+      }
+    },
+    {
+      "id": "pure_heart",
+      "name": "道心纯净",
+      "desc": "达成结局时心魔为0",
+      "icon": "🤍",
+      "category": "挑战",
+      "trigger": {
+        "type": "ending_with_resource",
+        "resource": "心魔",
+        "max_value": 0,
+        "min_rank": "C"
+      }
+    },
+    {
+      "id": "artifact_collector",
+      "name": "法宝收藏家",
+      "desc": "单局获得3个以上法宝",
+      "icon": "🏺",
+      "category": "收集",
+      "trigger": {
+        "type": "artifacts_count",
+        "min": 3
+      }
+    },
+    {
+      "id": "all_artifacts",
+      "name": "法宝大全",
+      "desc": "累计获得所有法宝",
+      "icon": "🎁",
+      "category": "收集",
+      "trigger": {
+        "type": "artifacts_all",
+        "artifacts": ["青霜剑", "妖丹", "太虚令", "药王鼎", "侠义勋章"]
+      }
+    },
+    {
+      "id": "reputation_righteous",
+      "name": "正道标杆",
+      "desc": "正道声望达到10",
+      "icon": "☀️",
+      "category": "声望",
+      "trigger": {
+        "type": "reputation_reach",
+        "faction": "正道",
+        "value": 10
+      }
+    },
+    {
+      "id": "reputation_demon",
+      "name": "魔道巨擘",
+      "desc": "魔道声望达到10",
+      "icon": "🌑",
+      "category": "声望",
+      "trigger": {
+        "type": "reputation_reach",
+        "faction": "魔道",
+        "value": 10
+      }
+    },
+    {
+      "id": "reputation_wanderer",
+      "name": "散修宗师",
+      "desc": "散修声望达到10",
+      "icon": "🌌",
+      "category": "声望",
+      "trigger": {
+        "type": "reputation_reach",
+        "faction": "散修",
+        "value": 10
+      }
+    },
+    {
+      "id": "random_event_lucky",
+      "name": "天降奇缘",
+      "desc": "单局触发5次以上随机事件",
+      "icon": "🎲",
+      "category": "奇遇",
+      "trigger": {
+        "type": "random_events",
+        "min": 5
+      }
+    },
+    {
+      "id": "first_save",
+      "name": "未雨绸缪",
+      "desc": "首次手动存档",
+      "icon": "💾",
+      "category": "系统",
+      "trigger": {
+        "type": "save_count",
+        "count": 1
+      }
+    },
+    {
+      "id": "legacy_unlock",
+      "name": "轮回积累",
+      "desc": "轮回点数达到5",
+      "icon": "♻️",
+      "category": "系统",
+      "trigger": {
+        "type": "legacy_points",
+        "value": 5
+      }
+    },
+    {
+      "id": "legacy_master",
+      "name": "轮回真君",
+      "desc": "轮回点数达到20",
+      "icon": "🔄",
+      "category": "系统",
+      "trigger": {
+        "type": "legacy_points",
+        "value": 20
+      }
+    },
+    {
+      "id": "quick_restart_user",
+      "name": "轮回熟手",
+      "desc": "使用快速轮回3次",
+      "icon": "🚀",
+      "category": "系统",
+      "trigger": {
+        "type": "quick_restart_count",
+        "count": 3
+      }
+    },
+    {
+      "id": "destiny_map_viewer",
+      "name": "命运窥探者",
+      "desc": "查看命运图谱",
+      "icon": "🗺️",
+      "category": "系统",
+      "trigger": {
+        "type": "view_destiny_map"
+      }
+    },
+    {
+      "id": "gallery_visitor",
+      "name": "结局鉴赏家",
+      "desc": "查看结局画廊",
+      "icon": "🖼️",
+      "category": "系统",
+      "trigger": {
+        "type": "view_gallery"
+      }
+    },
+    {
+      "id": "settings_tweaker",
+      "name": "细节讲究",
+      "desc": "更改任意设置项",
+      "icon": "⚙️",
+      "category": "系统",
+      "trigger": {
+        "type": "change_settings"
+      }
+    },
+    {
+      "id": "bad_ending",
+      "name": "歧路亡羊",
+      "desc": "达成D级结局",
+      "icon": "💀",
+      "category": "隐藏",
+      "hidden": true,
+      "trigger": {
+        "type": "ending_rank",
+        "rank": "D"
+      }
+    },
+    {
+      "id": "perfect_score",
+      "name": "完美修仙",
+      "desc": "达成220分以上结局",
+      "icon": "💯",
+      "category": "隐藏",
+      "hidden": true,
+      "trigger": {
+        "type": "score_reach",
+        "value": 220
+      }
+    },
+    {
+      "id": "zero_attrs",
+      "name": "废柴逆袭",
+      "desc": "所有初始属性设为5后达成A级以上结局",
+      "icon": "🌱",
+      "category": "隐藏",
+      "hidden": true,
+      "trigger": {
+        "type": "challenge_zero_start",
+        "min_rank": "A"
+      }
+    },
+    {
+      "id": "sword_true_ending",
+      "name": "剑冠天下",
+      "desc": "达成剑修真结局",
+      "icon": "🗡️",
+      "category": "隐藏",
+      "hidden": true,
+      "trigger": {
+        "type": "ending_id",
+        "ending": "end_sword_saint"
+      }
+    },
+    {
+      "id": "pill_true_ending",
+      "name": "丹成九转",
+      "desc": "达成丹修真结局",
+      "icon": "⚗️",
+      "category": "隐藏",
+      "hidden": true,
+      "trigger": {
+        "type": "ending_id",
+        "ending": "end_saint"
+      }
+    }
+  ]
+}

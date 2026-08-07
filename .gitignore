@@ -6,3 +6,12 @@ build/
 *.spec.bak
 exports/
 output/
+saves/*.json
+!saves/_gallery.json
+*.log
+.vscode/
+.idea/
+node_modules/
+.env
+temp/
+tmp/

@@ -42,12 +42,15 @@ from playability import (
     load_progression,
     maybe_random_event,
     mini_game_for,
+    PIVOTAL_NODES,
     record_progression,
     score_summary,
     snapshot,
 )
+from achievement_system import AchievementSystem
 
 STATIC_DIR = os.path.join(RESOURCE_DIR, "static")
+DATA_DIR = os.path.join(RESOURCE_DIR, "data")
 app = Flask(__name__, static_folder=STATIC_DIR, static_url_path="")
 
 # 全局游戏实例（简化：单用户）
@@ -55,6 +58,10 @@ games: dict[str, Game] = {}
 game_last_seen: dict[str, float] = {}
 SESSION_TTL_SECONDS = 60 * 60 * 6
 SAVE_DIR = os.path.join(APP_DIR, "saves")
+
+# 成就系统实例
+achievement_system = AchievementSystem(DATA_DIR)
+achievement_system.load_unlocked(SAVE_DIR)
 
 
 def safe_save_path(filename: str) -> str:
@@ -228,6 +235,11 @@ def api_choice():
             data = get_node_data(g)
             data["feedback"] = feedback
             data["choice_result"] = {"passed": False, "from": previous_node_id}
+
+            # 检查成就
+            newly_unlocked = check_and_return_achievements(g, data)
+            data["achievements"] = newly_unlocked
+
             return jsonify(data)
 
     g.current_node = choice.get("next", g.current_node)
@@ -237,6 +249,11 @@ def api_choice():
     data = get_node_data(g)
     data["feedback"] = feedback
     data["choice_result"] = {"passed": req_met, "from": previous_node_id}
+
+    # 检查成就
+    newly_unlocked = check_and_return_achievements(g, data)
+    data["achievements"] = newly_unlocked
+
     return jsonify(data)
 
 
@@ -452,6 +469,49 @@ def api_progression():
     return jsonify({"ok": True, "progression": load_progression(SAVE_DIR), "achievement_hints": ACHIEVEMENT_HINTS})
 
 
+def check_and_return_achievements(g: Game, data: dict) -> list[dict]:
+    """检查并返回新解锁的成就"""
+    ensure_gameplay_state(g)
+
+    # 构建成就检查上下文
+    progression = load_progression(SAVE_DIR)
+    gallery = read_gallery()
+
+    context = {
+        "node_id": g.current_node,
+        "attrs": g.attrs,
+        "resources": g.resources,
+        "artifacts": g.artifacts,
+        "reputation": g.reputation,
+        "affinity": g.affinity,
+        "is_ending": data.get("is_ending", False),
+        "route": data.get("route", ""),
+        "rank": data.get("score_summary", {}).get("rank", "C"),
+        "score": data.get("score_summary", {}).get("score", 0),
+        "path_length": len(g.path_history),
+        "ending_count": len(gallery),
+        "insights": g.flags.get("insights", []),
+        "legacy_points": progression.get("legacy_points", 0),
+    }
+
+    # 检查新成就
+    newly_unlocked = achievement_system.check_achievements(context)
+
+    # 保存更新后的成就状态
+    if newly_unlocked:
+        achievement_system.save_unlocked(SAVE_DIR)
+
+    return newly_unlocked
+
+
+@app.route("/api/achievements_full", methods=["GET"])
+def api_achievements_full():
+    """获取完整成就列表"""
+    achievements = achievement_system.get_all_visible()
+    stats = achievement_system.get_stats()
+    return jsonify({"ok": True, "achievements": achievements, "stats": stats})
+
+
 @app.route("/api/destiny_map", methods=["POST"])
 def api_destiny_map():
     data = request.get_json() or {}
@@ -496,6 +556,9 @@ def get_node_data(g: Game) -> dict:
     route = infer_route(g.current_node, node)
     summary = score_summary(g, node.get("title", "")) if is_ending else None
 
+    # 检查是否是关键转折点
+    pivot = PIVOTAL_NODES.get(g.current_node)
+
     return {
         "ok": True,
         "node_id": g.current_node,
@@ -519,6 +582,7 @@ def get_node_data(g: Game) -> dict:
         "mini_game": mini_game_for(g.current_node, node),
         "achievement_hints": ACHIEVEMENT_HINTS,
         "score_summary": summary,
+        "pivot": pivot,  # 新增：关键转折点信息
     }
 
 

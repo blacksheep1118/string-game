@@ -67,6 +67,18 @@ ARTIFACT_NODES = {
     "end_hero": "侠义勋章",
 }
 
+# 关键命运转折点 - 会触发视觉特效
+PIVOTAL_NODES = {
+    "choose_path": {"type": "major", "text": "命运分岔点", "shake": "medium", "flash": "#c9a96e"},
+    "sword_tactic": {"type": "major", "text": "剑道天赋觉醒", "shake": "heavy", "flash": "#6b8e6b"},
+    "give_core": {"type": "major", "text": "获得剑心", "shake": "medium", "flash": "#49627a"},
+    "pill_master": {"type": "major", "text": "丹道大成", "shake": "light", "flash": "#c9a96e"},
+    "possessed": {"type": "critical", "text": "心魔入侵！", "shake": "heavy", "flash": "#8b3a3a"},
+    "sect_neutral": {"type": "major", "text": "宗门抉择", "shake": "medium", "flash": "#6b8e6b"},
+    "rich_path": {"type": "minor", "text": "商道机缘", "shake": "light", "flash": "#c9a96e"},
+    "woods_adventure": {"type": "major", "text": "散修奇遇", "shake": "medium", "flash": "#49627a"},
+}
+
 ACHIEVEMENT_HINTS = [
     "剑心通明：沿剑修路线保持低心魔达成高评价结局。",
     "丹心未染：丹修路线积累丹药，同时避免心魔过高。",

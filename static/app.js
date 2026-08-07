@@ -166,6 +166,7 @@ function renderActions() {
   el.innerHTML = `
     <button class="action-btn" onclick="saveGame()" aria-label="保存进度">💾 保存进度</button>
     <button class="action-btn" onclick="showLoadModal()" aria-label="读取存档">📂 读取存档</button>
+    <button class="action-btn" onclick="showAchievementsModal()" aria-label="成就系统">🏆 成就</button>
     <button class="action-btn" onclick="restartGame()" aria-label="重新开始">🔄 重新开始</button>
     <button class="action-btn" onclick="quickRestart()" aria-label="快速轮回">↻ 快速轮回</button>
     <button class="action-btn" onclick="showDestinyMap()" aria-label="命运图谱">☷ 命运图谱</button>
@@ -239,6 +240,19 @@ function renderNode(data) {
   // 章节切换时自动存档（静默，后台完成）
   autoSaveOnChapter(data);
 
+  // 检查是否是关键转折点，触发视觉特效
+  if (data.pivot && window.screenShake && window.screenFlash && window.markDestinyPivot) {
+    markDestinyPivot();
+    screenShake(data.pivot.shake || 'medium');
+    screenFlash(data.pivot.flash || '#c9a96e', 300);
+
+    // 显示转折点浮动文字
+    if (window.floatingTextManager && data.pivot.text) {
+      const rect = content.getBoundingClientRect();
+      floatingTextManager.showPivotalNode(data.pivot.text, rect.left + rect.width / 2, rect.top + 100);
+    }
+  }
+
   let html = `<div class="fade-in">`;
   html += `<div class="chapter-title">${escapeHTML(data.title)}</div>`;
   if (data.goal) {
@@ -276,9 +290,46 @@ async function makeChoice(idx) {
   try {
     const data = await api('/api/choice', { choice: idx });
     renderNode(data);
+
+    // 显示新解锁的成就
+    if (data.achievements && data.achievements.length > 0) {
+      data.achievements.forEach((ach, i) => {
+        setTimeout(() => showAchievementPopup(ach), i * 500);
+      });
+    }
   } catch (err) {
     toast(err.message || '操作失败');
   }
+}
+
+// 显示成就解锁弹窗
+function showAchievementPopup(ach) {
+  const popup = document.createElement('div');
+  popup.className = 'achievement-popup';
+  popup.innerHTML = `
+    <div class="achievement-icon">${ach.icon}</div>
+    <div class="achievement-info">
+      <div class="achievement-name">${escapeHTML(ach.name)}</div>
+      <div class="achievement-desc">${escapeHTML(ach.desc)}</div>
+    </div>
+  `;
+  document.body.appendChild(popup);
+
+  // 播放音效
+  playNote(659, 0.2, 'triangle', 0.06);
+  setTimeout(() => playNote(784, 0.3, 'triangle', 0.05), 100);
+
+  // 使用浮动文字管理器显示
+  if (window.floatingTextManager) {
+    const rect = popup.getBoundingClientRect();
+    floatingTextManager.showAchievement(ach.name, window.innerWidth / 2, 150);
+  }
+
+  // 3秒后移除
+  setTimeout(() => {
+    popup.classList.add('fade-out');
+    setTimeout(() => popup.remove(), 300);
+  }, 3000);
 }
 
 // 保存
@@ -427,6 +478,56 @@ async function showDestinyMap() {
     document.body.insertAdjacentHTML('beforeend', html);
   } catch (err) {
     toast(err.message || '命运图谱读取失败');
+  }
+}
+
+// 显示成就系统
+async function showAchievementsModal() {
+  try {
+    const data = await apiGet('/api/achievements_full');
+    const achievements = data.achievements || [];
+    const stats = data.stats || {};
+
+    let html = `<div class="modal-overlay" onclick="this.remove()"><div class="modal achievements-modal" onclick="event.stopPropagation()">
+      <h2>🏆 成就系统</h2>
+      <div class="achievement-stats">
+        <span>已解锁: ${stats.unlocked || 0}/${stats.total || 0}</span>
+        <span>完成度: ${stats.progress || 0}%</span>
+        <span>隐藏成就: ${stats.hidden_unlocked || 0}/${stats.hidden_total || 0}</span>
+      </div>`;
+
+    // 按类别分组
+    const categories = {};
+    achievements.forEach(ach => {
+      const cat = ach.category || '其他';
+      if (!categories[cat]) categories[cat] = [];
+      categories[cat].push(ach);
+    });
+
+    Object.entries(categories).forEach(([cat, achs]) => {
+      html += `<div class="achievement-category">
+        <h3>${escapeHTML(cat)}</h3>
+        <div class="achievement-grid">`;
+
+      achs.forEach(ach => {
+        const locked = ach.unlocked ? '' : 'locked';
+        const hiddenText = ach.hidden && !ach.unlocked ? '???' : escapeHTML(ach.name);
+        const descText = ach.hidden && !ach.unlocked ? '尚未解锁' : escapeHTML(ach.desc);
+
+        html += `<div class="achievement-card ${locked}">
+          <div class="achievement-icon">${ach.unlocked ? ach.icon : '🔒'}</div>
+          <div class="achievement-name">${hiddenText}</div>
+          <div class="achievement-desc">${descText}</div>
+        </div>`;
+      });
+
+      html += `</div></div>`;
+    });
+
+    html += `<button class="close-btn" onclick="this.closest('.modal-overlay').remove()">关闭</button></div></div>`;
+    document.body.insertAdjacentHTML('beforeend', html);
+  } catch (err) {
+    toast(err.message || '成就系统读取失败');
   }
 }
 
