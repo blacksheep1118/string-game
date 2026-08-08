@@ -43,17 +43,19 @@ def validate_nodes(
                 errors.append(f"{prefix}: 缺少 text")
             for key in ("next", "fail"):
                 target = choice.get(key)
-                if target and target not in nodes:
+                if target and (not isinstance(target, str) or target not in nodes):
                     errors.append(f"{prefix}.{key}: 指向不存在节点 {target}")
+            if not choice.get("next") and not choice.get("fail"):
+                errors.append(f"{prefix}: 缺少 next 或 fail 目标")
             for attr_group in ("effect", "require"):
                 values = choice.get(attr_group, {})
-                if values and not isinstance(values, dict):
+                if not isinstance(values, dict):
                     errors.append(f"{prefix}.{attr_group}: 必须是对象")
                     continue
                 for attr, value in values.items():
                     if attr_names and attr not in attr_names and attr not in resource_names:
                         errors.append(f"{prefix}.{attr_group}: 未知属性 {attr}")
-                    if not isinstance(value, int):
+                    if isinstance(value, bool) or not isinstance(value, int):
                         errors.append(f"{prefix}.{attr_group}.{attr}: 必须是整数")
     return errors
 
@@ -142,7 +144,8 @@ def main() -> int:
     parser.add_argument("--output", default=os.path.join("data", "story_nodes.json"))
     args = parser.parse_args()
 
-    from game import ATTR_NAMES, NODES
+    from xiantu.engine import ATTR_NAMES
+    from xiantu.story import NODES
 
     errors = validate_nodes(NODES, ATTR_NAMES)
     if errors:
@@ -166,6 +169,8 @@ def main() -> int:
         }, ensure_ascii=False, indent=2))
     else:
         print(f"剧情节点校验通过，共 {len(NODES)} 个节点。")
+    if args.command == "quality" and (quality["unreachable"] or quality["placeholders"]):
+        return 1
     return 0
 
 

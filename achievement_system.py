@@ -21,8 +21,8 @@ class AchievementSystem:
         try:
             with open(path, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                return data.get("achievements", [])
-        except (OSError, json.JSONDecodeError):
+                return data.get("achievements", []) if isinstance(data, dict) else []
+        except (OSError, json.JSONDecodeError, TypeError):
             return []
 
     def load_unlocked(self, save_dir: str) -> None:
@@ -34,8 +34,9 @@ class AchievementSystem:
         try:
             with open(path, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                self.unlocked = set(data.get("unlocked", []))
-        except (OSError, json.JSONDecodeError):
+                unlocked = data.get("unlocked", []) if isinstance(data, dict) else []
+                self.unlocked = set(unlocked) if isinstance(unlocked, list) else set()
+        except (OSError, json.JSONDecodeError, TypeError):
             self.unlocked = set()
 
     def save_unlocked(self, save_dir: str) -> None:

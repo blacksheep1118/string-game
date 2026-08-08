@@ -30,6 +30,17 @@ class ServerApiTest(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.get_json()["code"], "invalid_choice")
 
+    def test_rejects_fractional_choice_index(self):
+        self.client.post("/api/new_game", json={"session_id": "t"})
+        self.client.post("/api/set_attrs", json={
+            "session_id": "t",
+            "attrs": {"根骨": 20, "幸运": 20, "魅力": 20, "精神": 20, "悟性": 20},
+            "trait": "1",
+        })
+        response = self.client.post("/api/choice", json={"session_id": "t", "choice": 0.5})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.get_json()["code"], "invalid_choice")
+
     def test_rejects_non_integer_attrs(self):
         self.client.post("/api/new_game", json={"session_id": "t"})
         response = self.client.post("/api/set_attrs", json={
@@ -68,6 +79,30 @@ class ServerApiTest(unittest.TestCase):
         payload = response.get_json()
         self.assertEqual(response.status_code, 200)
         self.assertTrue(payload["map"]["branches"])
+
+    def test_story_stats_are_data_driven(self):
+        response = self.client.get("/api/story_stats")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["nodes"], len(server.NODES))
+        self.assertEqual(response.get_json()["endings"], 79)
+
+    def test_record_ending_updates_gallery_and_leaderboard(self):
+        self.client.post("/api/new_game", json={"session_id": "t"})
+        game = server.games["t"]
+        game.current_node = "end_sword_god"
+        response = self.client.post("/api/record_ending", json={"session_id": "t"})
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.get_json()["is_new"])
+        self.assertEqual(len(self.client.get("/api/gallery").get_json()), 1)
+        self.assertEqual(len(self.client.get("/api/leaderboard").get_json()), 1)
+        unlocked = {item["id"] for item in response.get_json()["achievements"]}
+        self.assertIn("first_ending", unlocked)
+
+    def test_record_ending_rejects_story_node_with_choices(self):
+        self.client.post("/api/new_game", json={"session_id": "t"})
+        response = self.client.post("/api/record_ending", json={"session_id": "t"})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.get_json()["code"], "not_ending")
 
     def test_chapter_zero_goal_and_neutral_route(self):
         self.assertIn("缘起", get_goal("第〇章 · 一念之善"))

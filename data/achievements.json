@@ -52,7 +52,7 @@
       "category": "进度",
       "trigger": {
         "type": "ending_count",
-        "count": 43
+        "count": 79
       }
     },
     {
@@ -122,7 +122,7 @@
       "category": "路线",
       "trigger": {
         "type": "ending_id",
-        "ending": "end_rich"
+        "ending": "end_merchant"
       }
     },
     {
@@ -491,7 +491,7 @@
       "hidden": true,
       "trigger": {
         "type": "ending_id",
-        "ending": "end_sword_saint"
+        "ending": "end_sword_master"
       }
     },
     {

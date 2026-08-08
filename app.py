@@ -19,11 +19,20 @@ else:
     APP_DIR = RESOURCE_DIR
 
 sys.path.insert(0, RESOURCE_DIR)
-from game import Game, NODES, ATTR_NAMES, TRAITS, ATTR_TOTAL, ATTR_MIN
+from xiantu.engine import (
+    ATTR_NAMES,
+    ATTR_MIN,
+    ATTR_TOTAL,
+    Game,
+    TRAITS,
+    apply_character_setup,
+)
+from xiantu.story import NODES
+from playability import infer_route
 from save_manager import delete_save, list_saves, load_save, save_game as write_game_save
 from theme_tokens import DARK_THEME, LIGHT_THEME
 
-SAVE_DIR = os.path.join(APP_DIR, "saves")
+SAVE_DIR = os.environ.get("XIANTU_SAVE_DIR", os.path.join(APP_DIR, "saves"))
 EXPORT_DIR = os.path.join(APP_DIR, "exports")
 
 # ============================================================
@@ -53,6 +62,18 @@ def _enable_dpi_awareness():
             ctypes.windll.user32.SetProcessDPIAware()
         except Exception:
             pass
+
+
+def _read_json_list(filepath):
+    """读取桌面端运行数据；文件损坏时按空列表处理。"""
+    if not os.path.exists(filepath):
+        return []
+    try:
+        with open(filepath, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, TypeError, ValueError, json.JSONDecodeError):
+        return []
+    return [item for item in data if isinstance(item, dict)] if isinstance(data, list) else []
 
 
 def _choose_font(root):
@@ -88,7 +109,7 @@ class XianTuApp:
         self.game = Game()
         self.last_chapter = ""
         self.auto_save_file = ""
-        self.undo_stack = []  # (current_node, path_history) tuples for undo
+        self.undo_stack = []  # 完整状态快照，撤销时同时恢复属性与资源
 
         # 持久化数据
         self.cleared_chapters = set()
@@ -139,7 +160,8 @@ class XianTuApp:
                 self.achievements = set(d.get("achievements", []))
                 self.saved_theme = d.get("theme", "dark")
                 self.saved_font_scale = d.get("font_scale", 0)
-            except: pass
+            except (OSError, TypeError, ValueError, json.JSONDecodeError):
+                pass
 
     def _save_persist(self):
         os.makedirs(SAVE_DIR, exist_ok=True)
@@ -149,7 +171,8 @@ class XianTuApp:
             try:
                 with open(pf, "r", encoding="utf-8") as f:
                     d = json.load(f)
-            except: pass
+            except (OSError, TypeError, ValueError, json.JSONDecodeError):
+                pass
         d.update({
             "chapters": list(self.cleared_chapters),
             "endings_count": self.endings_count,
@@ -186,7 +209,8 @@ class XianTuApp:
             try:
                 with open(pf, "r", encoding="utf-8") as f:
                     d = json.load(f)
-            except: pass
+            except (OSError, TypeError, ValueError, json.JSONDecodeError):
+                pass
         d["geometry"] = geo
         with open(pf, "w", encoding="utf-8") as f:
             json.dump(d, f)
@@ -198,7 +222,8 @@ class XianTuApp:
                 with open(pf, "r", encoding="utf-8") as f:
                     d = json.load(f)
                 return d.get("geometry", "880x680")
-            except: pass
+            except (OSError, TypeError, ValueError, json.JSONDecodeError):
+                pass
         return "880x680"
 
     def _ensure_window_visible(self):
@@ -385,7 +410,8 @@ class XianTuApp:
         ]
         if self.cleared_chapters:
             menu_items.append(("6", "章节选择", self.show_chapter_select))
-        if self.endings_count >= 46:
+        total_endings = sum(1 for story_node in NODES.values() if not story_node.get("choices"))
+        if self.endings_count >= total_endings:
             menu_items.append(("★", "隐藏结局", self._start_bonus_ending))
 
         for key, text, cmd in menu_items:
@@ -402,6 +428,8 @@ class XianTuApp:
             self.root.unbind(k)
 
     def show_new_game_name(self):
+        self._stop_timer()
+        self.undo_stack.clear()
         self._clear_content()
         self._render_attrs()
         self._clear_keys()
@@ -567,18 +595,8 @@ class XianTuApp:
                               highlightbackground=C["border"], highlightthickness=1)
 
     def _start_game(self):
-        g = self.game
-        trait_key = self.selected_trait
-        if trait_key in TRAITS:
-            g.trait = TRAITS[trait_key]["name"]
-            for name, bonus in TRAITS[trait_key]["bonus"].items():
-                self.attrs[name] = self.attrs.get(name, 0) + bonus
-        g.attrs = self.attrs
-        g.current_node = "start"
-        g.path_history = []
-        self.last_chapter = ""
-        self.auto_save_file = ""
-        self.render_current_node()
+        """保留旧调用名，统一走带运势和计时的开局流程。"""
+        self._start_game_with_extras()
 
     def render_current_node(self):
         node = NODES.get(self.game.current_node)
@@ -642,10 +660,6 @@ class XianTuApp:
             # Esc 回主菜单
             self.root.bind("<Escape>", lambda e: self.show_main_menu())
 
-            # 暗雷事件 — 5%概率触发
-            if random.random() < 0.05:
-                self._trigger_random_event()
-
             # 炼丹小游戏 — 特定节点
             if self.game.current_node in ("ch4_pill_power_1", "ch4_pill_power_3", "ch4_pill_heal_2"):
                 self._pill_mini_game()
@@ -695,10 +709,7 @@ class XianTuApp:
         os.makedirs(SAVE_DIR, exist_ok=True)
         node = NODES.get(self.game.current_node, {})
         gallery_file = os.path.join(SAVE_DIR, "_gallery.json")
-        gallery = []
-        if os.path.exists(gallery_file):
-            with open(gallery_file, "r", encoding="utf-8") as f:
-                gallery = json.load(f)
+        gallery = _read_json_list(gallery_file)
         record = {
             "title": node.get("title", ""),
             "player_name": self.game.player_name,
@@ -707,7 +718,7 @@ class XianTuApp:
             "path_count": len(self.game.path_history),
             "achieved_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         }
-        existing = [e for e in gallery if e["title"] == node.get("title", "")]
+        existing = [e for e in gallery if e.get("title", "") == node.get("title", "")]
         if not existing:
             gallery.append(record)
             with open(gallery_file, "w", encoding="utf-8") as f:
@@ -731,34 +742,16 @@ class XianTuApp:
         if idx >= len(choices):
             return
 
-        # 保存撤销点
-        self.undo_stack.append((self.game.current_node, list(self.game.path_history)))
-
-        choice = choices[idx]
-        self.game.path_history.append(self.game.current_node)
-
-        # 属性加成
-        effect = choice.get("effect", {})
-        for attr, delta in effect.items():
-            if attr in self.game.attrs:
-                self.game.attrs[attr] += delta
-            elif attr in self.game.resources:
-                self.game.resources[attr] += delta
-
-        # 属性判定
-        req = choice.get("require", {})
-        if req:
-            met = all(
-                self.game.attrs.get(name, self.game.resources.get(name, 0)) >= value
-                for name, value in req.items()
-            )
-            if not met and "fail" in choice:
-                self.game.current_node = choice["fail"]
-                self.render_current_node()
-                return
-
-        self.game.current_node = choice.get("next", self.game.current_node)
-        self._inject_gameplay_rewards()
+        self.undo_stack.append(self.game.checkpoint())
+        try:
+            result = self.game.make_choice(idx)
+        except ValueError:
+            self.undo_stack.pop()
+            self._toast("选择无效")
+            return
+        for message in result.get("feedback", []):
+            if message.startswith("【奇遇】") or message.startswith("获得法宝"):
+                self._toast(message)
         self._check_achievements()
         self.render_current_node()
 
@@ -811,18 +804,10 @@ class XianTuApp:
 
     def _load_game(self, filename):
         d = load_save(SAVE_DIR, filename)
+        self._stop_timer()
+        self.undo_stack.clear()
         self.game = Game()
-        self.game.player_name = d.get("player_name", "叶尘")
-        self.game.current_node = d.get("current_node", "start")
-        self.game.path_history = d.get("path_history", [])
-        self.game.attrs = d.get("attrs", {k: 20 for k in ATTR_NAMES})
-        self.game.trait = d.get("trait", "")
-        self.game.artifacts = d.get("artifacts", [])
-        self.game.inventory = d.get("inventory", [])
-        self.game.affinity = d.get("affinity", {})
-        self.game.reputation = d.get("reputation", {"正道": 0, "魔道": 0, "散修": 0})
-        self.game.resources = d.get("resources", {"灵石": 0, "心魔": 0, "历练": 0, "丹药": 0, "轮回": 0})
-        self.game.flags = d.get("flags", {"rewarded_nodes": [], "insights": []})
+        self.game.load_data(d)
         self.last_chapter = ""
         self.auto_save_file = ""
         self.render_current_node()
@@ -838,15 +823,13 @@ class XianTuApp:
 
     def show_gallery(self):
         gallery_file = os.path.join(SAVE_DIR, "_gallery.json")
-        gallery = []
-        if os.path.exists(gallery_file):
-            with open(gallery_file, "r", encoding="utf-8") as f:
-                gallery = json.load(f)
+        gallery = _read_json_list(gallery_file)
 
         self._clear_content()
         tk.Label(self.content_inner, text="结局画廊", font=(*FONT, 16, "bold"),
                  fg=C["gold"], bg=C["panel"]).pack(pady=(30, 5))
-        tk.Label(self.content_inner, text=f"已收集: {len(gallery)} / 46",
+        total_endings = sum(1 for story_node in NODES.values() if not story_node.get("choices"))
+        tk.Label(self.content_inner, text=f"已收集: {len(gallery)} / {total_endings}",
                  font=(*FONT, 10), fg=C["text_dim"], bg=C["panel"]).pack(pady=(0, 15))
 
         if not gallery:
@@ -995,7 +978,7 @@ class XianTuApp:
                  font=(*FONT, 14, "bold"), fg=C["gold"], bg=C["panel"]).pack(pady=(30, 15))
         text = (
             "你已踏遍仙途的每一个角落，见证了所有的命运分支。\n\n"
-            "四十六种结局在你心中汇聚成河——\n"
+            f"{sum(1 for story_node in NODES.values() if not story_node.get('choices'))}种结局在你心中汇聚成河——\n"
             "你终于明白，仙途不是一条路，而是万千可能性的总和。\n\n"
             "天道有常，众生皆苦。\n"
             "而你，已超脱其中。\n\n"
@@ -1018,10 +1001,7 @@ class XianTuApp:
         os.makedirs(SAVE_DIR, exist_ok=True)
         node = {"title": "【隐藏结局】天命所归  评价：SS+——你已洞悉一切"}
         gallery_file = os.path.join(SAVE_DIR, "_gallery.json")
-        gallery = []
-        if os.path.exists(gallery_file):
-            with open(gallery_file, "r", encoding="utf-8") as f:
-                gallery = json.load(f)
+        gallery = _read_json_list(gallery_file)
         if not any(e.get("title","") == node["title"] for e in gallery):
             gallery.append({"title": node["title"], "player_name": "天命者", "trait": "万法归一",
                            "attrs": self.game.attrs, "path_count": 0,
@@ -1083,7 +1063,7 @@ class XianTuApp:
                     winsound.Beep(notes[i % len(notes)], int(durations[i % len(durations)] * 800))
                     i += 1
                     time.sleep(0.3)
-                except:
+                except (ImportError, OSError, RuntimeError):
                     break
         t = threading.Thread(target=loop, daemon=True)
         t.start()
@@ -1162,10 +1142,7 @@ class XianTuApp:
     def _save_leaderboard(self, ending_title):
         os.makedirs(SAVE_DIR, exist_ok=True)
         lb_file = os.path.join(SAVE_DIR, "_leaderboard.json")
-        lb = []
-        if os.path.exists(lb_file):
-            with open(lb_file, "r", encoding="utf-8") as f:
-                lb = json.load(f)
+        lb = _read_json_list(lb_file)
 
         score = sum(self.game.attrs.values())
         # 提取评价
@@ -1193,10 +1170,7 @@ class XianTuApp:
 
     def show_leaderboard(self):
         lb_file = os.path.join(SAVE_DIR, "_leaderboard.json")
-        lb = []
-        if os.path.exists(lb_file):
-            with open(lb_file, "r", encoding="utf-8") as f:
-                lb = json.load(f)
+        lb = _read_json_list(lb_file)
 
         self._clear_content()
         tk.Label(self.content_inner, text="排行榜", font=(*FONT, 16, "bold"),
@@ -1435,7 +1409,7 @@ class XianTuApp:
             ("速通达人", lambda: self.timer_seconds > 0 and self.timer_seconds < 180),
             ("今日大吉", lambda: self.daily_fortune == "大吉"),
             ("不屈不挠", lambda: getattr(self, '_death_count', 0) >= 3),
-            ("全结局达成", lambda: self.endings_count >= 46),
+            ("全结局达成", lambda: self.endings_count >= sum(1 for story_node in NODES.values() if not story_node.get("choices"))),
             ("十周目老玩家", lambda: self.endings_count >= 10),
             ("挑战者", lambda: self.game.challenge_mode),
         ]
@@ -1446,7 +1420,8 @@ class XianTuApp:
                     if condition():
                         self.achievements.add(name)
                         new_achs.append(name)
-                except: pass
+                except Exception:
+                    continue
 
         if new_achs:
             self._save_persist()
@@ -1571,41 +1546,46 @@ class XianTuApp:
         tk.Label(self.content_inner, text="结局树", font=self._sized_font(16, "bold"),
                  fg=C["gold"], bg=C["panel"]).pack(pady=(30, 5))
 
-        canvas = tk.Canvas(self.content_inner, width=700, height=300, bg=C["panel"], highlightthickness=0)
-        canvas.pack(pady=10)
+        tree_frame = tk.Frame(self.content_inner, bg=C["panel"])
+        tree_frame.pack(fill="both", expand=True, padx=20, pady=10)
+        canvas = tk.Canvas(tree_frame, width=700, height=360, bg=C["panel"], highlightthickness=0)
+        scrollbar = tk.Scrollbar(tree_frame, orient="vertical", command=canvas.yview)
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
 
         gallery_file = os.path.join(SAVE_DIR, "_gallery.json")
-        unlocked = set()
-        if os.path.exists(gallery_file):
-            with open(gallery_file, "r", encoding="utf-8") as f:
-                unlocked = {e.get("title", "") for e in json.load(f)}
+        unlocked = {e.get("title", "") for e in _read_json_list(gallery_file)}
 
-        # 简化的树状图：主分支 + 叶节点
-        branches = {
-            "剑修": ("剑神降世", "堕入魔道", "正道砥柱", "逍遥剑仙", "妖仙至尊", "青霜剑侠"),
-            "丹修": ("丹剑宗师", "走火入魔", "丹圣临世", "仁心圣手", "丹武双绝", "疯丹仙"),
-            "宗门": ("一代掌门", "宗门英烈", "散修传奇", "王者归来"),
-            "散修": ("太虚传人", "凡人善终", "大器晚成", "一方守护", "博古通今"),
-            "古玉": ("神魂俱灭", "自强不息", "一体两面", "心魔之主"),
-            "商道": ("财可通神", "凡尘圆满", "富甲三界", "功德成仙"),
-        }
+        # 结局树直接由当前剧情图生成，避免新增结局后继续显示旧清单。
+        branches = {}
+        for node_id, node in NODES.items():
+            if node.get("choices"):
+                continue
+            branch = infer_route(node_id, node)
+            branches.setdefault(branch, []).append((node_id, node.get("title", node_id)))
 
-        y = 40
-        for branch, endings in branches.items():
-            x = 60
-            canvas.create_text(x, y, text=branch, font=self._sized_font(10, "bold"),
-                              fill=C["gold"], anchor="w")
-            canvas.create_line(x + 50, y, x + 80, y, fill=C["border"])
-            x += 85
-            for end in endings:
-                is_unlocked = any(end in u for u in unlocked)
+        y = 24
+        for branch, endings in sorted(branches.items()):
+            canvas.create_text(12, y, text=branch, font=self._sized_font(10, "bold"),
+                               fill=C["gold"], anchor="w")
+            canvas.create_line(75, y, 95, y, fill=C["border"])
+            x = 105
+            y += 2
+            for _, title in sorted(endings, key=lambda item: item[1]):
+                display_title = title.split("】", 1)[-1] if "】" in title else title
+                is_unlocked = title in unlocked
                 color = C["gold"] if is_unlocked else C["text_dim"]
                 icon = "●" if is_unlocked else "○"
-                canvas.create_oval(x - 3, y - 3, x + 3, y + 3, fill=color, outline="")
-                canvas.create_text(x + 15, y, text=f"{icon}{end}", font=self._sized_font(8),
-                                  fill=color, anchor="w")
-                x += max(90, len(end) * 9 + 20)
-            y += 42
+                width = max(110, min(210, len(display_title) * 9 + 34))
+                if x + width > 700:
+                    x = 105
+                    y += 24
+                canvas.create_oval(x, y - 3, x + 6, y + 3, fill=color, outline="")
+                canvas.create_text(x + 12, y, text=f"{icon}{display_title}",
+                                   font=self._sized_font(8), fill=color, anchor="w")
+                x += width
+            y += 34
 
         canvas.configure(scrollregion=canvas.bbox("all"))
         self._big_choice(self.content_inner, "Esc", "返回", self.show_settings).pack(pady=10)
@@ -1648,7 +1628,7 @@ class XianTuApp:
             filename = f"screenshot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
             img.save(os.path.join(EXPORT_DIR, filename))
             self._toast(f"截图已保存: {filename}")
-        except:
+        except Exception:
             self._toast("截图失败，需要安装 Pillow: pip install pillow")
 
     def _tts_speak(self, text):
@@ -1656,7 +1636,7 @@ class XianTuApp:
             import win32com.client
             speaker = win32com.client.Dispatch("SAPI.SpVoice")
             speaker.Speak(text)
-        except:
+        except Exception:
             pass  # 静默失败，不影响游戏
 
     # ============================================================
@@ -1683,58 +1663,18 @@ class XianTuApp:
     def _start_game_with_extras(self):
         """覆盖 _start_game，注入运势加成和计时"""
         g = self.game
-        trait_key = self.selected_trait
-        if trait_key in TRAITS:
-            g.trait = TRAITS[trait_key]["name"]
-            for name, bonus in TRAITS[trait_key]["bonus"].items():
-                self.attrs[name] = self.attrs.get(name, 0) + bonus
-        g.attrs = self.attrs
-        g.attrs["幸运"] = g.attrs.get("幸运", 0) + self.fortune_bonus
-        g.current_node = "start"
-        g.path_history = []
-        g.artifacts = []
-        g.inventory = []
-        g.affinity = {}
-        g.reputation = {"正道": 0, "魔道": 0, "散修": 0}
+        self.attrs = apply_character_setup(
+            g,
+            self.attrs,
+            trait_key=self.selected_trait,
+            fortune_bonus=self.fortune_bonus,
+        )
+        self.undo_stack.clear()
+        self._stop_timer()
         self.last_chapter = ""
         self.auto_save_file = ""
         self._start_timer()
         self.render_current_node()
-
-    # ============================================================
-    # 在 _make_choice 后注入法宝/声望等
-    # ============================================================
-    def _inject_gameplay_rewards(self):
-        """每次选择后检查是否触发奖励"""
-        nid = self.game.current_node
-        # 法宝奖励 — 特定节点
-        artifact_nodes = {
-            "sword_tactic": "妖丹",
-            "give_core": "青霜剑",
-            "end_breakthrough": "妖灵珠",
-            "end_inheritance": "太虚令",
-            "end_saint": "药王鼎",
-            "end_hero": "侠义勋章",
-        }
-        if nid in artifact_nodes and artifact_nodes[nid] not in self.game.artifacts:
-            self.game.artifacts.append(artifact_nodes[nid])
-            self._toast(f"获得法宝: {artifact_nodes[nid]}")
-
-        # 声望
-        rep_map = {
-            "end_alliance": ("正道", 5), "end_leader": ("正道", 4), "end_hero": ("正道", 3),
-            "end_fallen": ("魔道", 5), "end_possessed": ("魔道", 4),
-            "end_isolate": ("散修", 4), "end_wander": ("散修", 3),
-        }
-        if nid in rep_map:
-            faction, val = rep_map[nid]
-            self.game.reputation[faction] += val
-
-        # 好感度
-        if "师父" in str(NODES.get(nid, {}).get("text", ""))[:50]:
-            self.game.affinity["师父"] = self.game.affinity.get("师父", 30) + 2
-        if "白眉" in str(NODES.get(nid, {}).get("text", ""))[:50]:
-            self.game.affinity["白眉道人"] = self.game.affinity.get("白眉道人", 20) + 2
 
     # ============================================================
     # 快捷键绑定（F12截图, Ctrl+E导出, Ctrl+T TTS）
@@ -1754,9 +1694,8 @@ class XianTuApp:
         if not self.undo_stack:
             self._toast("无法撤销")
             return
-        prev_node, prev_history = self.undo_stack.pop()
-        self.game.current_node = prev_node
-        self.game.path_history = prev_history
+        checkpoint = self.undo_stack.pop()
+        self.game.restore_checkpoint(checkpoint)
         self.render_current_node()
         self._toast("已撤销")
 

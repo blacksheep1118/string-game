@@ -1,4 +1,4 @@
-const CACHE_NAME = 'xiantu-v3';
+const CACHE_NAME = 'xiantu-v4';
 const CORE_ASSETS = [
   '/',
   '/index.html',

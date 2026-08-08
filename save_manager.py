@@ -16,8 +16,10 @@ def ensure_save_dir(save_dir: str) -> None:
 
 
 def safe_filename(filename: str) -> str:
+    if not isinstance(filename, str):
+        return ""
     basename = os.path.basename(filename or "")
-    if basename.startswith("_"):
+    if basename in {"", ".", ".."} or basename.startswith("_"):
         return ""
     return basename
 
@@ -38,6 +40,8 @@ def new_save_filename() -> str:
 
 
 def migrate_save(data: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(data, dict):
+        raise ValueError("存档必须是 JSON 对象")
     migrated = dict(data)
     migrated.setdefault("schema_version", 1)
     migrated.setdefault("player_name", "叶尘")
@@ -113,7 +117,7 @@ def list_saves(save_dir: str) -> list[dict[str, Any]]:
             continue
         try:
             data = load_save(save_dir, filename)
-        except (json.JSONDecodeError, OSError):
+        except (json.JSONDecodeError, OSError, TypeError, ValueError):
             continue
         saves.append({
             "filename": filename,
@@ -134,12 +138,18 @@ def delete_save(save_dir: str, filename: str) -> bool:
 
 
 def validate_save_payload(payload: dict[str, Any], nodes: dict[str, Any], attr_names: list[str]) -> dict[str, Any]:
-    data = migrate_save(payload)
+    try:
+        data = migrate_save(payload)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(str(exc)) from exc
     if data["current_node"] not in nodes:
         raise ValueError("存档节点不存在")
     attrs = data.get("attrs", {})
     if not isinstance(attrs, dict):
         raise ValueError("存档属性格式错误")
+    unknown_attrs = sorted(set(attrs) - set(attr_names))
+    if unknown_attrs:
+        raise ValueError(f"存档包含未知属性: {', '.join(unknown_attrs)}")
     for name in attr_names:
         try:
             attrs[name] = int(attrs.get(name, 20))
@@ -147,5 +157,14 @@ def validate_save_payload(payload: dict[str, Any], nodes: dict[str, Any], attr_n
             raise ValueError(f"{name}属性必须是整数")
     data["attrs"] = attrs
     if not isinstance(data.get("path_history"), list):
-        data["path_history"] = []
+        raise ValueError("存档路径格式错误")
+    unknown_history = [node_id for node_id in data["path_history"] if node_id not in nodes]
+    if unknown_history:
+        raise ValueError("存档路径包含不存在节点")
+    for key in ("resources", "reputation", "affinity", "flags"):
+        if not isinstance(data.get(key), dict):
+            raise ValueError(f"存档字段 {key} 格式错误")
+    for key in ("artifacts", "inventory"):
+        if not isinstance(data.get(key), list):
+            raise ValueError(f"存档字段 {key} 格式错误")
     return data

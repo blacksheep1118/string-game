@@ -62,21 +62,41 @@ ARTIFACT_EFFECTS = {
 ARTIFACT_NODES = {
     "sword_tactic": "妖丹",
     "give_core": "青霜剑",
+    "end_breakthrough": "妖灵珠",
     "end_inheritance": "太虚令",
     "end_saint": "药王鼎",
     "end_hero": "侠义勋章",
 }
 
+INVENTORY_NODES = {
+    "pill_power": "筑基丹",
+    "pill_caution": "清心丹",
+    "pill_rush": "狂暴丹",
+    "pill_heal": "回春丹",
+    "pill_poison_path_3": "毒丹",
+    "end_pill_saint": "九转金丹",
+}
+
+REPUTATION_NODES = {
+    "end_alliance": {"正道": 5},
+    "end_leader": {"正道": 4},
+    "end_hero": {"正道": 3},
+    "end_fallen": {"魔道": 5},
+    "end_possessed": {"魔道": 4},
+    "end_isolate": {"散修": 4},
+    "end_wander": {"散修": 3},
+}
+
 # 关键命运转折点 - 会触发视觉特效
 PIVOTAL_NODES = {
-    "choose_path": {"type": "major", "text": "命运分岔点", "shake": "medium", "flash": "#c9a96e"},
+    "accept": {"type": "major", "text": "命运分岔点", "shake": "medium", "flash": "#c9a96e"},
     "sword_tactic": {"type": "major", "text": "剑道天赋觉醒", "shake": "heavy", "flash": "#6b8e6b"},
     "give_core": {"type": "major", "text": "获得剑心", "shake": "medium", "flash": "#49627a"},
-    "pill_master": {"type": "major", "text": "丹道大成", "shake": "light", "flash": "#c9a96e"},
-    "possessed": {"type": "critical", "text": "心魔入侵！", "shake": "heavy", "flash": "#8b3a3a"},
+    "pill_choice_branch": {"type": "major", "text": "丹道分岔", "shake": "light", "flash": "#c9a96e"},
+    "jade_trust": {"type": "critical", "text": "心魔入侵！", "shake": "heavy", "flash": "#8b3a3a"},
     "sect_neutral": {"type": "major", "text": "宗门抉择", "shake": "medium", "flash": "#6b8e6b"},
-    "rich_path": {"type": "minor", "text": "商道机缘", "shake": "light", "flash": "#c9a96e"},
-    "woods_adventure": {"type": "major", "text": "散修奇遇", "shake": "medium", "flash": "#49627a"},
+    "ch4_rich_expand": {"type": "minor", "text": "商道机缘", "shake": "light", "flash": "#c9a96e"},
+    "woods_explore": {"type": "major", "text": "散修奇遇", "shake": "medium", "flash": "#49627a"},
 }
 
 ACHIEVEMENT_HINTS = [
@@ -143,9 +163,9 @@ def choice_hints(choice: dict[str, Any]) -> list[str]:
     effect = choice.get("effect", {})
     for attr, delta in effect.items():
         if delta > 0:
-            hints.append(f"可能提升{attr}")
+            hints.append(f"可能提升{attr}" if attr != "心魔" else "会增加心魔")
         elif delta < 0:
-            hints.append(f"可能消耗{attr}")
+            hints.append(f"可能消耗{attr}" if attr != "心魔" else "可能压制心魔")
     text = choice.get("text", "")
     if any(word in text for word in ("强行", "拼死", "心魔", "魔")):
         hints.append("高风险高收益")
@@ -193,6 +213,17 @@ def apply_node_rewards(game: Any, node_id: str, node: dict[str, Any]) -> list[st
     if artifact and artifact not in game.artifacts:
         game.artifacts.append(artifact)
         feedback.append(f"获得法宝「{artifact}」：{ARTIFACT_EFFECTS.get(artifact, '提供特殊结算加成')}。")
+
+    item = INVENTORY_NODES.get(node_id)
+    if item and item not in game.inventory:
+        game.inventory.append(item)
+        feedback.append(f"收入丹药「{item}」，可在后续丹道结算中留下记录。")
+
+    _add_mapping(game.reputation, REPUTATION_NODES.get(node_id, {}))
+    text = str(node.get("text", ""))
+    for marker, npc in (("师父", "师父"), ("白眉", "白眉道人"), ("道侣", "道侣")):
+        if marker in text:
+            game.affinity[npc] = int(game.affinity.get(npc, 0)) + 1
 
     return feedback
 
@@ -259,11 +290,26 @@ def score_summary(game: Any, ending_title: str) -> dict[str, Any]:
 def mini_game_for(node_id: str, node: dict[str, Any]) -> dict[str, Any] | None:
     route = infer_route(node_id, node)
     if route == "剑修":
-        return {"type": "combat", "title": "战斗态势", "bars": [{"label": "剑势", "value": min(100, 35 + node_id.count('_') * 12)}]}
+        return {
+            "type": "combat",
+            "title": "战斗态势",
+            "bars": [{"label": "剑势", "value": min(100, 35 + node_id.count("_") * 12)}],
+            "prompt": "高根骨可降低战斗代价。",
+        }
     if route == "丹修":
-        return {"type": "alchemy", "title": "炉火火候", "bars": [{"label": "火候", "value": 62}]}
+        return {
+            "type": "alchemy",
+            "title": "炉火火候",
+            "bars": [{"label": "火候", "value": 62}],
+            "prompt": "稳健路线更容易留下丹药，冒险路线更容易获得高评价。",
+        }
     if route == "古玉":
-        return {"type": "mind", "title": "心魔波动", "bars": [{"label": "心魔", "value": 48}]}
+        return {
+            "type": "mind",
+            "title": "心魔波动",
+            "bars": [{"label": "心魔", "value": 48}],
+            "prompt": "精神越高，越容易从古玉分支全身而退。",
+        }
     return None
 
 
@@ -273,16 +319,23 @@ def progression_path(save_dir: str) -> str:
 
 def load_progression(save_dir: str) -> dict[str, Any]:
     path = progression_path(save_dir)
+    defaults = {"legacy_points": 0, "endings": [], "insights": []}
     if not os.path.exists(path):
-        return {"legacy_points": 0, "endings": [], "insights": []}
+        return defaults
     try:
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
-    except (OSError, json.JSONDecodeError):
-        return {"legacy_points": 0, "endings": [], "insights": []}
-    data.setdefault("legacy_points", 0)
-    data.setdefault("endings", [])
-    data.setdefault("insights", [])
+    except (OSError, json.JSONDecodeError, TypeError):
+        return defaults
+    if not isinstance(data, dict):
+        return defaults
+    try:
+        data["legacy_points"] = max(0, int(data.get("legacy_points", 0)))
+    except (TypeError, ValueError):
+        data["legacy_points"] = 0
+    for key in ("endings", "insights"):
+        if not isinstance(data.get(key), list):
+            data[key] = []
     return data
 
 

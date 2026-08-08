@@ -10,7 +10,11 @@ a = Analysis(
         ('data', 'data'),
         ('static', 'static'),
     ],
-    hiddenimports=['game', 'save_manager', 'story_tools', 'theme_tokens', 'playability', 'tkinter'],
+    hiddenimports=[
+        'game', 'save_manager', 'story_tools', 'theme_tokens', 'playability',
+        'xiantu', 'xiantu.config', 'xiantu.engine', 'xiantu.story', 'xiantu.terminal',
+        'tkinter',
+    ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

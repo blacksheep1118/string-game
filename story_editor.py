@@ -14,7 +14,7 @@ def read_nodes(path: str) -> dict[str, dict[str, Any]]:
     if os.path.exists(path):
         with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
-    from game import NODES
+    from xiantu.story import NODES
     return NODES
 
 

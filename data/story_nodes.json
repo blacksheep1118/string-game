@@ -208,7 +208,7 @@
       },
       {
         "text": "继续嗑药，赌一把速成金丹",
-        "next": "pill_rush",
+        "next": "ch5_pill_power_1",
         "effect": {
           "心魔": 2
         }
@@ -281,7 +281,7 @@
     "choices": [
       {
         "text": "支持掌门，维护宗门正统",
-        "next": "join_sect"
+        "next": "sect_leader"
       },
       {
         "text": "两不相帮，专注修炼",
@@ -726,15 +726,15 @@
     "text": "你两不相帮，却被双方视为墙头草。\n最终你被逐出玄天宗，流落江湖。\n\n但你不是轻易认输的人——\n",
     "choices": [
       {
-        "text": "继续保持中立立场",
-        "next": "ch5_sect_neutral_1",
+        "text": "公开声明只忠于宗门",
+        "next": "sect_neutral_expand_1",
         "effect": {
           "精神": 2
         }
       },
       {
-        "text": "低调修炼，避开纷争",
-        "next": "ch6_neutral_1",
+        "text": "暂退一步，继续修炼",
+        "next": "ch5_sect_neutral_1",
         "effect": {
           "悟性": 2
         }
@@ -819,7 +819,7 @@
     "choices": [
       {
         "text": "停下研读，将知识整理成册",
-        "next": "end_scholar",
+        "next": "ch6_woods_study",
         "require": {
           "悟性": 25
         },
@@ -1782,7 +1782,7 @@
     "choices": [
       {
         "text": "支持掌门，拥护改革",
-        "next": "sect_leader"
+        "next": "join_sect"
       },
       {
         "text": "保持中立，埋头苦修",
@@ -1880,7 +1880,7 @@
     "choices": [
       {
         "text": "坦然地接受审视",
-        "next": "woods_touch",
+        "next": "woods_explore",
         "effect": {
           "精神": 2
         }
@@ -2216,7 +2216,7 @@
       },
       {
         "text": "丹毒而已，多吃几颗丹药冲过去",
-        "next": "ch5_pill_power_2"
+        "next": "pill_rush"
       }
     ]
   },
@@ -2282,11 +2282,11 @@
     "choices": [
       {
         "text": "找一座孤峰独自修炼",
-        "next": "end_isolate"
+        "next": "ch6_neutral_end"
       },
       {
         "text": "「总有一天我会回来。」立下重誓",
-        "next": "end_comeback"
+        "next": "ch6_neutral_1"
       }
     ]
   },
@@ -2513,11 +2513,11 @@
     "choices": [
       {
         "text": "接纳它，成为妖灵共主",
-        "next": "end_breakthrough"
+        "next": "absorb_fight"
       },
       {
         "text": "封印大部分力量，只保留可控的部分",
-        "next": "end_half_demon"
+        "next": "absorb_giveup"
       }
     ]
   },
@@ -2671,7 +2671,7 @@
         "require": {
           "悟性": 25
         },
-        "fail": "ch6_sect_leader_1"
+        "fail": "ch6_sect_leader_2"
       },
       {
         "text": "燃烧精血，强行提升战力",

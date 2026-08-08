@@ -19,7 +19,15 @@ else:
     APP_DIR = RESOURCE_DIR
 
 sys.path.insert(0, RESOURCE_DIR)
-from game import Game, NODES, ATTR_NAMES, TRAITS, ATTR_TOTAL, ATTR_MIN, create_character
+from xiantu.engine import (
+    ATTR_MIN,
+    ATTR_NAMES,
+    Game,
+    apply_character_setup,
+    resolve_choice,
+    validate_attrs,
+)
+from xiantu.story import NODES
 from save_manager import (
     delete_save,
     list_saves,
@@ -32,20 +40,16 @@ from save_manager import (
 )
 from playability import (
     ACHIEVEMENT_HINTS,
-    apply_node_rewards,
     choice_hints,
     destiny_map,
-    diff_feedback,
     ensure_gameplay_state,
     get_goal,
     infer_route,
     load_progression,
-    maybe_random_event,
     mini_game_for,
     PIVOTAL_NODES,
     record_progression,
     score_summary,
-    snapshot,
 )
 from achievement_system import AchievementSystem
 
@@ -57,7 +61,7 @@ app = Flask(__name__, static_folder=STATIC_DIR, static_url_path="")
 games: dict[str, Game] = {}
 game_last_seen: dict[str, float] = {}
 SESSION_TTL_SECONDS = 60 * 60 * 6
-SAVE_DIR = os.path.join(APP_DIR, "saves")
+SAVE_DIR = os.environ.get("XIANTU_SAVE_DIR", os.path.join(APP_DIR, "saves"))
 
 # 成就系统实例
 achievement_system = AchievementSystem(DATA_DIR)
@@ -116,7 +120,7 @@ def api_new_game():
     sid = data.get("session_id", "default")
     g = Game()
     ensure_gameplay_state(g)
-    g.player_name = data.get("name", "叶尘")
+    g.player_name = str(data.get("name") or "叶尘").strip()[:20] or "叶尘"
     games[sid] = g
     touch_session(sid)
     progression = load_progression(SAVE_DIR)
@@ -144,40 +148,22 @@ def api_set_attrs():
 
     attrs = data.get("attrs", {})
     trait_key = data.get("trait", "1")
-    if not isinstance(attrs, dict):
-        return error_response("属性格式错误", "invalid_attrs")
-    try:
-        attrs = {k: int(attrs.get(k, ATTR_MIN)) for k in ATTR_NAMES}
-    except (TypeError, ValueError):
-        return error_response("属性必须是整数", "invalid_attr_value")
-
-    # 验证属性总和
-    total = sum(attrs.get(k, 0) for k in ATTR_NAMES)
-    if total > ATTR_TOTAL:
-        return error_response(f"属性总和超过{ATTR_TOTAL}", "attrs_overflow")
-
-    for k in ATTR_NAMES:
-        if attrs.get(k, ATTR_MIN) < ATTR_MIN:
-            return error_response(f"{k}不能低于{ATTR_MIN}", "attr_too_low")
-
-    # 补齐默认值
-    for k in ATTR_NAMES:
-        attrs[k] = attrs.get(k, ATTR_MIN)
-
-    # 应用词条
-    if trait_key in TRAITS:
-        g.trait = TRAITS[trait_key]["name"]
-        for name, bonus in TRAITS[trait_key]["bonus"].items():
-            attrs[name] = attrs.get(name, 0) + bonus
-
     progression = load_progression(SAVE_DIR)
     legacy_bonus = min(10, int(progression.get("legacy_points", 0)))
-    if legacy_bonus:
-        attrs["幸运"] = attrs.get("幸运", 0) + legacy_bonus
-        g.resources["轮回"] = legacy_bonus
-
-    g.attrs = attrs
-    g.current_node = "start"
+    try:
+        attrs = validate_attrs(attrs)
+        apply_character_setup(g, attrs, trait_key, legacy_bonus=legacy_bonus)
+    except ValueError as exc:
+        message = str(exc)
+        if "整数" in message:
+            code = "invalid_attr_value"
+        elif "超过" in message:
+            code = "attrs_overflow"
+        elif "低于" in message:
+            code = "attr_too_low"
+        else:
+            code = "invalid_attrs"
+        return error_response(message, code)
 
     return jsonify(get_node_data(g))
 
@@ -193,67 +179,14 @@ def api_choice():
     touch_session(sid)
 
     try:
-        choice_idx = int(data.get("choice", 0))
-    except (TypeError, ValueError):
-        return error_response("invalid choice", "invalid_choice")
-    node = NODES.get(g.current_node)
-    if not node or choice_idx < 0 or choice_idx >= len(node.get("choices", [])):
-        return error_response("invalid choice", "invalid_choice")
+        result = resolve_choice(g, data.get("choice", 0), NODES)
+    except ValueError as exc:
+        code = str(exc) if str(exc) in {"invalid_choice", "story_target_missing"} else "invalid_choice"
+        return error_response("invalid choice" if code == "invalid_choice" else "剧情目标不存在", code)
 
-    ensure_gameplay_state(g)
-    before = snapshot(g)
-    previous_node_id = g.current_node
-    g.path_history.append(g.current_node)
-
-    choice = node["choices"][choice_idx]
-    feedback = [f"你选择了：{choice.get('text', '')}"]
-
-    # 应用属性加成
-    effect = choice.get("effect", {})
-    for attr, delta in effect.items():
-        if attr in g.attrs:
-            g.attrs[attr] += delta
-        elif attr in g.resources:
-            g.resources[attr] += delta
-
-    # 检查要求
-    req = choice.get("require", {})
-    req_met = True
-    if req:
-        req_met = all(
-            g.attrs.get(name, g.resources.get(name, 0)) >= value
-            for name, value in req.items()
-        )
-        if req_met:
-            req_desc = "、".join(f"{k}≥{v}" for k, v in req.items())
-            feedback.append(f"判定通过：{req_desc}")
-        elif len(g.path_history) <= 4 and "fail" in choice:
-            shortest = min(g.attrs.get(k, 0) - v for k, v in req.items())
-            if shortest >= -5:
-                req_met = True
-                feedback.append("初入仙途的机缘护住了你，本次低差距判定勉强通过。")
-        if not req_met and "fail" in choice:
-            feedback.append("判定失败：能力不足，命运转向更艰难的路线。")
-            g.current_node = choice["fail"]
-            feedback.extend(apply_node_rewards(g, g.current_node, NODES.get(g.current_node, {})))
-            feedback.extend(diff_feedback(before, g))
-            data = get_node_data(g)
-            data["feedback"] = feedback
-            data["choice_result"] = {"passed": False, "from": previous_node_id}
-
-            # 检查成就
-            newly_unlocked = check_and_return_achievements(g, data)
-            data["achievements"] = newly_unlocked
-
-            return jsonify(data)
-
-    g.current_node = choice.get("next", g.current_node)
-    feedback.extend(apply_node_rewards(g, g.current_node, NODES.get(g.current_node, {})))
-    feedback.extend(maybe_random_event(g))
-    feedback.extend(diff_feedback(before, g))
     data = get_node_data(g)
-    data["feedback"] = feedback
-    data["choice_result"] = {"passed": req_met, "from": previous_node_id}
+    data["feedback"] = result["feedback"]
+    data["choice_result"] = {"passed": result["passed"], "from": result["from"]}
 
     # 检查成就
     newly_unlocked = check_and_return_achievements(g, data)
@@ -307,22 +240,14 @@ def api_load():
 
     try:
         d = load_save(SAVE_DIR, filename)
+        d = validate_save_payload(d, NODES, ATTR_NAMES)
     except FileNotFoundError:
         return error_response("存档不存在", "save_not_found")
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        return error_response(str(exc) or "存档格式错误", "invalid_save")
 
     g = Game()
-    g.player_name = d.get("player_name", "叶尘")
-    g.current_node = d.get("current_node", "start")
-    g.path_history = d.get("path_history", [])
-    g.attrs = d.get("attrs", {k: 20 for k in ATTR_NAMES})
-    g.trait = d.get("trait", "")
-    g.artifacts = d.get("artifacts", [])
-    g.inventory = d.get("inventory", [])
-    g.affinity = d.get("affinity", {})
-    g.reputation = d.get("reputation", {"正道": 0, "魔道": 0, "散修": 0})
-    g.resources = d.get("resources", {"灵石": 0, "心魔": 0, "历练": 0, "丹药": 0, "轮回": 0})
-    g.flags = d.get("flags", {"rewarded_nodes": [], "insights": []})
-    ensure_gameplay_state(g)
+    g.load_data(d)
     games[sid] = g
     touch_session(sid)
 
@@ -342,14 +267,14 @@ def api_record_ending():
     ensure_gameplay_state(g)
 
     node = NODES.get(g.current_node, {})
+    if node.get("choices"):
+        return error_response("当前节点不是结局", "not_ending")
     ending_title = node.get("title", "")
 
     os.makedirs(SAVE_DIR, exist_ok=True)
     gallery_file = os.path.join(SAVE_DIR, "_gallery.json")
-    gallery = []
-    if os.path.exists(gallery_file):
-        with open(gallery_file, "r", encoding="utf-8") as f:
-            gallery = json.load(f)
+    gallery = read_gallery()
+    summary = score_summary(g, ending_title)
 
     record = {
         "title": ending_title,
@@ -357,38 +282,87 @@ def api_record_ending():
         "trait": g.trait,
         "attrs": g.attrs,
         "path_count": len(g.path_history),
+        "score": summary["score"],
+        "rank": summary["rank"],
         "achieved_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }
 
     # 去重：相同结局不重复记录
-    existing = [e for e in gallery if e["title"] == ending_title]
+    existing = [e for e in gallery if isinstance(e, dict) and e.get("title") == ending_title]
     if not existing:
         gallery.append(record)
         with open(gallery_file, "w", encoding="utf-8") as f:
             json.dump(gallery, f, ensure_ascii=False, indent=2)
 
+    leaderboard_file = os.path.join(SAVE_DIR, "_leaderboard.json")
+    leaderboard = []
+    if os.path.exists(leaderboard_file):
+        try:
+            with open(leaderboard_file, "r", encoding="utf-8") as f:
+                leaderboard = json.load(f)
+        except (OSError, json.JSONDecodeError):
+            leaderboard = []
+    if not isinstance(leaderboard, list):
+        leaderboard = []
+    cleaned_leaderboard = []
+    for item in leaderboard:
+        if not isinstance(item, dict):
+            continue
+        try:
+            item = dict(item)
+            item["score"] = int(item.get("score", 0))
+            item["path_count"] = int(item.get("path_count", 0))
+        except (TypeError, ValueError):
+            continue
+        cleaned_leaderboard.append(item)
+    leaderboard = cleaned_leaderboard
+    leaderboard.append({
+        "player_name": g.player_name,
+        "title": ending_title,
+        "rank": summary["rank"],
+        "score": summary["score"],
+        "path_count": len(g.path_history),
+        "achieved_at": record["achieved_at"],
+    })
+    leaderboard.sort(key=lambda item: (-item["score"], item["path_count"]))
+    with open(leaderboard_file, "w", encoding="utf-8") as f:
+        json.dump(leaderboard[:20], f, ensure_ascii=False, indent=2)
+
     progression = record_progression(SAVE_DIR, g, ending_title)
-    return jsonify({"ok": True, "total": len(gallery), "is_new": not existing, "progression": progression})
+    ending_data = get_node_data(g)
+    newly_unlocked = check_and_return_achievements(g, ending_data)
+    return jsonify({
+        "ok": True,
+        "total": len(gallery),
+        "is_new": not existing,
+        "progression": progression,
+        "achievements": newly_unlocked,
+    })
 
 
 @app.route("/api/gallery", methods=["GET"])
 def api_gallery():
     """获取结局画廊"""
-    gallery_file = os.path.join(SAVE_DIR, "_gallery.json")
-    if not os.path.exists(gallery_file):
-        return jsonify([])
-    with open(gallery_file, "r", encoding="utf-8") as f:
-        return jsonify(json.load(f))
+    return jsonify(read_gallery())
+
+
+@app.route("/api/story_stats", methods=["GET"])
+def api_story_stats():
+    """返回由当前剧情数据计算出的规模，避免前端写死旧统计。"""
+
+    endings = sum(1 for node in NODES.values() if not node.get("choices"))
+    return jsonify({"ok": True, "nodes": len(NODES), "endings": endings})
 
 
 @app.route("/api/achievements", methods=["GET"])
 def api_achievements():
-    pf = os.path.join(SAVE_DIR, "_persist.json")
-    if not os.path.exists(pf):
-        return jsonify({"achievements": [], "endings_count": 0})
-    with open(pf, "r", encoding="utf-8") as f:
-        d = json.load(f)
-    return jsonify({"achievements": d.get("achievements", []), "endings_count": d.get("endings_count", 0)})
+    achievement_system.load_unlocked(SAVE_DIR)
+    stats = achievement_system.get_stats()
+    return jsonify({
+        "achievements": achievement_system.get_all_visible(),
+        "endings_count": len(read_gallery()),
+        "stats": stats,
+    })
 
 
 @app.route("/api/leaderboard", methods=["GET"])
@@ -396,8 +370,12 @@ def api_leaderboard():
     lb_file = os.path.join(SAVE_DIR, "_leaderboard.json")
     if not os.path.exists(lb_file):
         return jsonify([])
-    with open(lb_file, "r", encoding="utf-8") as f:
-        return jsonify(json.load(f))
+    try:
+        with open(lb_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return jsonify(data if isinstance(data, list) else [])
+    except (OSError, json.JSONDecodeError):
+        return jsonify([])
 
 
 @app.route("/api/fortune", methods=["GET"])
@@ -444,7 +422,7 @@ def api_import_save():
     if payload is None and "file" in request.files:
         try:
             payload = json.load(request.files["file"].stream)
-        except json.JSONDecodeError:
+        except (OSError, json.JSONDecodeError, TypeError):
             return error_response("存档 JSON 无法解析", "invalid_json")
     if not isinstance(payload, dict):
         return error_response("缺少存档内容", "missing_save")
@@ -464,7 +442,8 @@ def read_gallery() -> list[dict]:
         return []
     try:
         with open(gallery_file, "r", encoding="utf-8") as f:
-            return json.load(f)
+            data = json.load(f)
+        return [entry for entry in data if isinstance(entry, dict)] if isinstance(data, list) else []
     except (OSError, json.JSONDecodeError):
         return []
 
@@ -477,6 +456,7 @@ def api_progression():
 def check_and_return_achievements(g: Game, data: dict) -> list[dict]:
     """检查并返回新解锁的成就"""
     ensure_gameplay_state(g)
+    achievement_system.load_unlocked(SAVE_DIR)
 
     # 构建成就检查上下文
     progression = load_progression(SAVE_DIR)
@@ -512,6 +492,7 @@ def check_and_return_achievements(g: Game, data: dict) -> list[dict]:
 @app.route("/api/achievements_full", methods=["GET"])
 def api_achievements_full():
     """获取完整成就列表"""
+    achievement_system.load_unlocked(SAVE_DIR)
     achievements = achievement_system.get_all_visible()
     stats = achievement_system.get_stats()
     return jsonify({"ok": True, "achievements": achievements, "stats": stats})

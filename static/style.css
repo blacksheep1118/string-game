@@ -156,6 +156,12 @@ body {
 .feedback-panel { color: var(--text); }
 .feedback-panel ul { list-style: none; display: grid; gap: 5px; }
 .feedback-panel li::before { content: "◇ "; color: var(--gold); }
+.mini-panel small { display: block; margin-top: 6px; color: var(--text-dim); }
+.leaderboard-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.leaderboard-table th,
+.leaderboard-table td { padding: 8px 6px; border-bottom: 1px solid var(--border); text-align: left; }
+.leaderboard-table th { color: var(--gold); font-weight: 600; }
+.fortune-result { color: var(--gold); font-size: 2.6rem; text-align: center; margin: 18px 0; }
 .choice-hints {
   display: flex;
   flex-wrap: wrap;

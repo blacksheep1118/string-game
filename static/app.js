@@ -192,7 +192,8 @@ function renderMiniPanel(panel) {
       <div class="mini-bar"><span style="width:${Math.max(0, Math.min(100, Number(bar.value) || 0))}%"></span></div>
     </div>
   `).join('');
-  return `<div class="mini-panel"><strong>${escapeHTML(panel.title || '态势')}</strong>${bars}</div>`;
+  const prompt = panel.prompt ? `<small>${escapeHTML(panel.prompt)}</small>` : '';
+  return `<div class="mini-panel"><strong>${escapeHTML(panel.title || '态势')}</strong>${bars}${prompt}</div>`;
 }
 
 function renderChoiceHints(hints = []) {
@@ -531,32 +532,9 @@ async function showAchievementsModal() {
   }
 }
 
-// 主菜单
-function showStartScreen() {
-  showMainMenu();
-}
-
 // ============================================================
 // 初始流程：名字 → 属性 → 词条 → 开始
 // ============================================================
-async function showMainMenu() {
-  const content = document.getElementById('content');
-  content.innerHTML = `
-    <div class="fade-in" style="text-align:center">
-      <div class="chapter-title">序章 · 天降机缘</div>
-      <div class="story-text" style="text-align:center;text-indent:0">
-        一段机缘，一个选择，一世仙途……<br>
-        你的每一个决定，都将改变命运。
-      </div>
-      <div style="display:flex;flex-direction:column;gap:10px;max-width:300px;margin:0 auto">
-        <button class="choice-btn" onclick="showNewGameDialog()"><span class="idx">1</span>开始新游戏</button>
-        <button class="choice-btn" onclick="showLoadModal()"><span class="idx">2</span>读取存档</button>
-      </div>
-    </div>`;
-  document.getElementById('attrs-panel').innerHTML = '';
-  document.getElementById('actions').innerHTML = '';
-}
-
 async function showNewGameDialog() {
   resetAutoSave();
   currentNode = null;
@@ -845,13 +823,17 @@ function showChapterTransition(title, callback) {
 // ============================================================
 async function showGallery() {
   let endings = [];
+  let storyStats = { endings: 0 };
   try {
-    endings = await apiGet('/api/gallery');
+    [endings, storyStats] = await Promise.all([
+      apiGet('/api/gallery'),
+      apiGet('/api/story_stats'),
+    ]);
   } catch (err) {
     toast(err.message || '读取画廊失败');
     return;
   }
-  const total = 46; // 总共有 46 个结局
+  const total = Number(storyStats.endings || 0);
   const content = document.getElementById('content');
 
   function getRankClass(title) {
@@ -898,15 +880,51 @@ async function showGallery() {
   document.getElementById('actions').innerHTML = '';
 }
 
+async function showLeaderboardModal() {
+  try {
+    const entries = await apiGet('/api/leaderboard');
+    const rows = (entries || []).map((entry, index) => `
+      <tr><td>${index + 1}</td><td>${escapeHTML(entry.player_name || '无名')}</td>
+      <td>${escapeHTML(entry.rank || 'C')}</td><td>${escapeHTML(entry.score || 0)}</td>
+      <td>${escapeHTML(entry.title || '')}</td></tr>`).join('');
+    const html = `<div class="modal-overlay" onclick="this.remove()"><div class="modal" onclick="event.stopPropagation()">
+      <h2>排行榜 · 仙途留名</h2>
+      <table class="leaderboard-table"><thead><tr><th>#</th><th>角色</th><th>评价</th><th>分数</th><th>结局</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="5">还没有通关记录</td></tr>'}</tbody></table>
+      <button class="close-btn" onclick="this.closest('.modal-overlay').remove()">关闭</button></div></div>`;
+    document.body.insertAdjacentHTML('beforeend', html);
+  } catch (err) {
+    toast(err.message || '排行榜读取失败');
+  }
+}
+
+async function showFortuneModal() {
+  try {
+    const data = await apiGet('/api/fortune');
+    const bonus = Number(data.bonus || 0);
+    const html = `<div class="modal-overlay" onclick="this.remove()"><div class="modal" onclick="event.stopPropagation()">
+      <h2>今日运势</h2><p class="fortune-result">${escapeHTML(data.fortune || '中吉')}</p>
+      <p style="text-align:center;color:var(--text-dim)">可作为下一轮开局参考：幸运 ${bonus >= 0 ? '+' : ''}${escapeHTML(bonus)}</p>
+      <button class="close-btn" onclick="this.closest('.modal-overlay').remove()">收下运势</button></div></div>`;
+    document.body.insertAdjacentHTML('beforeend', html);
+  } catch (err) {
+    toast(err.message || '运势读取失败');
+  }
+}
+
 // ============================================================
 // 结局总结
 // ============================================================
 async function showEndingSummary(data) {
+  let record = {};
   try {
-    await api('/api/record_ending');
+    record = await api('/api/record_ending');
   } catch (err) {
     toast(err.message || '结局记录失败');
   }
+  (record.achievements || []).forEach((ach, i) => {
+    setTimeout(() => showAchievementPopup(ach), i * 500);
+  });
   playEndingSound();
 
   const node = data;
@@ -975,7 +993,6 @@ makeChoice = async function(idx) {
 // ============================================================
 // 重写主菜单 — 加入画廊入口
 // ============================================================
-const _showMainMenu_original = showMainMenu;
 showMainMenu = function() {
   currentNode = null;
   isEnding = false;
@@ -993,7 +1010,9 @@ showMainMenu = function() {
         <button class="choice-btn" onclick="initAudio();playChoiceClick();showLoadModal()"><span class="idx">2</span>读取存档</button>
         <button class="choice-btn" onclick="initAudio();playChoiceClick();showGallery()"><span class="idx">3</span>结局画廊</button>
         <button class="choice-btn" onclick="showDestinyMap()"><span class="idx">4</span>命运图谱</button>
-        <button class="choice-btn" onclick="showSettingsModal()"><span class="idx">5</span>设置</button>
+        <button class="choice-btn" onclick="showLeaderboardModal()"><span class="idx">5</span>排行榜</button>
+        <button class="choice-btn" onclick="showFortuneModal()"><span class="idx">6</span>今日运势</button>
+        <button class="choice-btn" onclick="showSettingsModal()"><span class="idx">7</span>设置</button>
       </div>
     </div>`;
   document.getElementById('attrs-panel').innerHTML = '';
