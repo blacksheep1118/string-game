@@ -10,6 +10,12 @@ __pycache__/
 
 # OS / IDE
 .DS_Store
+.coverage
+coverage.xml
+htmlcov/
+*.egg-info/
+*.dmg
+*.zip
 .vscode/
 .idea/
 

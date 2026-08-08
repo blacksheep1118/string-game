@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import unittest
 
-from xiantu.engine import ATTR_NAMES, Game, apply_character_setup
+from xiantu.engine import ATTR_NAMES, Game, apply_character_setup, resolve_choice
 from xiantu.story import NODES
 
 
@@ -36,6 +36,31 @@ class EngineTest(unittest.TestCase):
     def test_story_loader_is_the_runtime_source(self):
         self.assertEqual(NODES["start"]["title"], "序章 · 天降机缘")
         self.assertEqual(sum(1 for node in NODES.values() if not node.get("choices")), 79)
+
+    def test_requirement_is_checked_before_choice_effect(self):
+        nodes = {
+            "start": {
+                "title": "测试",
+                "text": "",
+                "choices": [{
+                    "text": "赌一把",
+                    "next": "success",
+                    "fail": "failure",
+                    "require": {"悟性": 24},
+                    "effect": {"悟性": 1},
+                }],
+            },
+            "success": {"title": "成功", "text": "", "choices": []},
+            "failure": {"title": "失败", "text": "", "choices": []},
+        }
+        game = Game()
+        game.current_node = "start"
+        game.attrs["悟性"] = 23
+        game.path_history = ["start"] * 4
+        result = resolve_choice(game, 0, nodes)
+        self.assertFalse(result["passed"])
+        self.assertEqual(game.current_node, "failure")
+        self.assertEqual(game.attrs["悟性"], 24)
 
 
 if __name__ == "__main__":

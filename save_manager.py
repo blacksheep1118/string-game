@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import json
 import os
+import re
+import tempfile
 from datetime import datetime
 from typing import Any
 
 SCHEMA_VERSION = 2
 SAVE_PREFIX = "save_"
+SAFE_FILENAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,119}$")
 
 
 def ensure_save_dir(save_dir: str) -> None:
@@ -21,7 +24,7 @@ def safe_filename(filename: str) -> str:
     basename = os.path.basename(filename or "")
     if basename in {"", ".", ".."} or basename.startswith("_"):
         return ""
-    return basename
+    return basename if SAFE_FILENAME_RE.fullmatch(basename) else ""
 
 
 def save_path(save_dir: str, filename: str) -> str:
@@ -55,6 +58,7 @@ def migrate_save(data: dict[str, Any]) -> dict[str, Any]:
     migrated.setdefault("reputation", {"正道": 0, "魔道": 0, "散修": 0})
     migrated.setdefault("resources", {"灵石": 0, "心魔": 0, "历练": 0, "丹药": 0, "轮回": 0})
     migrated.setdefault("flags", {})
+    migrated.setdefault("rng_state", None)
     migrated.setdefault("title", "")
     migrated.setdefault("saved_at", "未知")
     migrated["schema_version"] = SCHEMA_VERSION
@@ -76,6 +80,7 @@ def build_save_data(game: Any, nodes: dict[str, dict[str, Any]]) -> dict[str, An
         "reputation": dict(getattr(game, "reputation", {})),
         "resources": dict(getattr(game, "resources", {})),
         "flags": dict(getattr(game, "flags", {})),
+        "rng_state": getattr(game, "rng", None).getstate() if getattr(game, "rng", None) else None,
         "title": node.get("title", ""),
         "saved_at": now_label(),
     }
@@ -89,8 +94,20 @@ def write_save(save_dir: str, data: dict[str, Any], overwrite: str = "") -> tupl
     if not filename.endswith(".json"):
         filename = f"{filename}.json"
     filepath = save_path(save_dir, filename)
-    with open(filepath, "w", encoding="utf-8") as f:
-        json.dump(migrate_save(data), f, ensure_ascii=False, indent=2)
+    payload = json.dumps(migrate_save(data), ensure_ascii=False, indent=2)
+    fd, temporary = tempfile.mkstemp(prefix=".save-", suffix=".tmp", dir=save_dir)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(payload)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(temporary, filepath)
+    except Exception:
+        try:
+            os.unlink(temporary)
+        except OSError:
+            pass
+        raise
     return filename, filepath
 
 
@@ -142,8 +159,12 @@ def validate_save_payload(payload: dict[str, Any], nodes: dict[str, Any], attr_n
         data = migrate_save(payload)
     except (TypeError, ValueError) as exc:
         raise ValueError(str(exc)) from exc
-    if data["current_node"] not in nodes:
+    if not isinstance(data["current_node"], str) or data["current_node"] not in nodes:
         raise ValueError("存档节点不存在")
+    if not isinstance(data.get("player_name"), str) or len(data["player_name"]) > 40:
+        raise ValueError("存档角色名格式错误")
+    if not isinstance(data.get("trait"), str) or len(data["trait"]) > 80:
+        raise ValueError("存档词条格式错误")
     attrs = data.get("attrs", {})
     if not isinstance(attrs, dict):
         raise ValueError("存档属性格式错误")
@@ -152,11 +173,19 @@ def validate_save_payload(payload: dict[str, Any], nodes: dict[str, Any], attr_n
         raise ValueError(f"存档包含未知属性: {', '.join(unknown_attrs)}")
     for name in attr_names:
         try:
+            if isinstance(attrs.get(name), bool):
+                raise ValueError
             attrs[name] = int(attrs.get(name, 20))
         except (TypeError, ValueError):
             raise ValueError(f"{name}属性必须是整数")
+        if attrs[name] < 0 or attrs[name] > 999:
+            raise ValueError(f"{name}属性超出存档范围")
+    if sum(attrs.values()) > 5000:
+        raise ValueError("存档属性总和超出范围")
     data["attrs"] = attrs
-    if not isinstance(data.get("path_history"), list):
+    if not isinstance(data.get("path_history"), list) or len(data["path_history"]) > 10000:
+        raise ValueError("存档路径格式错误")
+    if any(not isinstance(node_id, str) or len(node_id) > 200 for node_id in data["path_history"]):
         raise ValueError("存档路径格式错误")
     unknown_history = [node_id for node_id in data["path_history"] if node_id not in nodes]
     if unknown_history:
@@ -165,6 +194,45 @@ def validate_save_payload(payload: dict[str, Any], nodes: dict[str, Any], attr_n
         if not isinstance(data.get(key), dict):
             raise ValueError(f"存档字段 {key} 格式错误")
     for key in ("artifacts", "inventory"):
-        if not isinstance(data.get(key), list):
+        values = data.get(key)
+        if not isinstance(values, list) or len(values) > 200:
             raise ValueError(f"存档字段 {key} 格式错误")
+        if any(not isinstance(value, str) or len(value) > 120 for value in values):
+            raise ValueError(f"存档字段 {key} 格式错误")
+    for key in ("resources", "reputation", "affinity"):
+        values = data[key]
+        if len(values) > 100 or any(not isinstance(name, str) or len(name) > 80 for name in values):
+            raise ValueError(f"存档字段 {key} 格式错误")
+        for name, value in values.items():
+            if isinstance(value, bool):
+                raise ValueError(f"存档字段 {key} 格式错误")
+            try:
+                values[name] = int(value)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(f"存档字段 {key} 格式错误") from exc
+    flags = data["flags"]
+    if len(flags) > 100 or any(not isinstance(name, str) or len(name) > 80 for name in flags):
+        raise ValueError("存档字段 flags 格式错误")
+    for name, value in flags.items():
+        if isinstance(value, list):
+            if len(value) > 500 or any(not isinstance(item, str) or len(item) > 200 for item in value):
+                raise ValueError("存档字段 flags 格式错误")
+        elif isinstance(value, dict):
+            if name != "initial_attrs" or len(value) > 20:
+                raise ValueError("存档字段 flags 格式错误")
+            for attr_name, attr_value in value.items():
+                if not isinstance(attr_name, str) or len(attr_name) > 80:
+                    raise ValueError("存档字段 flags 格式错误")
+                try:
+                    numeric_value = int(attr_value)
+                except (TypeError, ValueError) as exc:
+                    raise ValueError("存档字段 flags 格式错误") from exc
+                if numeric_value < 0 or numeric_value > 999:
+                    raise ValueError("存档字段 flags 格式错误")
+                value[attr_name] = numeric_value
+        elif isinstance(value, (tuple, set)):
+            raise ValueError("存档字段 flags 格式错误")
+    rng_state = data.get("rng_state")
+    if rng_state is not None and not isinstance(rng_state, (list, tuple)):
+        raise ValueError("存档随机状态格式错误")
     return data

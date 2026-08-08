@@ -30,6 +30,16 @@ class ServerApiTest(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.get_json()["code"], "invalid_choice")
 
+    def test_rejects_malformed_session_and_incomplete_setup(self):
+        malformed = self.client.post("/api/new_game", json={"session_id": []})
+        self.assertEqual(malformed.status_code, 400)
+        self.assertEqual(malformed.get_json()["code"], "invalid_session")
+
+        self.client.post("/api/new_game", json={"session_id": "t"})
+        incomplete = self.client.post("/api/choice", json={"session_id": "t", "choice": 0})
+        self.assertEqual(incomplete.status_code, 409)
+        self.assertEqual(incomplete.get_json()["code"], "setup_required")
+
     def test_rejects_fractional_choice_index(self):
         self.client.post("/api/new_game", json={"session_id": "t"})
         self.client.post("/api/set_attrs", json={
@@ -74,6 +84,25 @@ class ServerApiTest(unittest.TestCase):
         self.assertIn("goal", payload)
         self.assertTrue(any("旅途阅历" in item for item in payload["feedback"]))
 
+    def test_route_trial_endpoint_is_single_use(self):
+        self.client.post("/api/new_game", json={"session_id": "t"})
+        self.client.post("/api/set_attrs", json={
+            "session_id": "t",
+            "attrs": {"根骨": 20, "幸运": 20, "魅力": 20, "精神": 20, "悟性": 20},
+            "trait": "1",
+        })
+        server.games["t"].current_node = "sword_tactic"
+        state = self.client.post("/api/state", json={"session_id": "t"}).get_json()
+        self.assertEqual(state["mini_game"]["type"], "combat")
+        result = self.client.post("/api/mini_game", json={"session_id": "t", "action": "defend"})
+        self.assertEqual(result.status_code, 200)
+        self.assertTrue(result.get_json()["mini_game"]["completed"])
+        self.assertTrue(result.get_json()["feedback"])
+
+        repeated = self.client.post("/api/mini_game", json={"session_id": "t", "action": "defend"})
+        self.assertEqual(repeated.status_code, 400)
+        self.assertEqual(repeated.get_json()["code"], "mini_game_completed")
+
     def test_destiny_map_endpoint(self):
         response = self.client.post("/api/destiny_map", json={"session_id": "none"})
         payload = response.get_json()
@@ -85,6 +114,18 @@ class ServerApiTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.get_json()["nodes"], len(server.NODES))
         self.assertEqual(response.get_json()["endings"], 79)
+        self.assertEqual(response.get_json()["total_endings"], 80)
+
+    def test_bonus_ending_is_locked_until_gallery_is_complete(self):
+        self.client.post("/api/new_game", json={"session_id": "t"})
+        self.client.post("/api/set_attrs", json={
+            "session_id": "t",
+            "attrs": {"根骨": 20, "幸运": 20, "魅力": 20, "精神": 20, "悟性": 20},
+            "trait": "1",
+        })
+        response = self.client.post("/api/bonus_ending", json={"session_id": "t"})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.get_json()["code"], "bonus_locked")
 
     def test_record_ending_updates_gallery_and_leaderboard(self):
         self.client.post("/api/new_game", json={"session_id": "t"})
@@ -97,6 +138,34 @@ class ServerApiTest(unittest.TestCase):
         self.assertEqual(len(self.client.get("/api/leaderboard").get_json()), 1)
         unlocked = {item["id"] for item in response.get_json()["achievements"]}
         self.assertIn("first_ending", unlocked)
+
+        repeated = self.client.post("/api/record_ending", json={"session_id": "t"})
+        self.assertEqual(repeated.status_code, 200)
+        self.assertFalse(repeated.get_json()["is_new"])
+        self.assertEqual(len(self.client.get("/api/leaderboard").get_json()), 1)
+
+    def test_rejects_unsafe_overwrite_and_imported_runtime_values(self):
+        self.client.post("/api/new_game", json={"session_id": "t"})
+        self.client.post("/api/set_attrs", json={
+            "session_id": "t",
+            "attrs": {"根骨": 20, "幸运": 20, "魅力": 20, "精神": 20, "悟性": 20},
+            "trait": "1",
+        })
+        unsafe = self.client.post("/api/save", json={
+            "session_id": "t",
+            "overwrite": "x' onmouseover='alert(1)",
+        })
+        self.assertEqual(unsafe.status_code, 400)
+        self.assertEqual(unsafe.get_json()["code"], "invalid_filename")
+
+        invalid = self.client.post("/api/import_save", json={
+            "save": {
+                "current_node": "start",
+                "attrs": {"根骨": -999999},
+            }
+        })
+        self.assertEqual(invalid.status_code, 400)
+        self.assertEqual(invalid.get_json()["code"], "invalid_save")
 
     def test_record_ending_rejects_story_node_with_choices(self):
         self.client.post("/api/new_game", json={"session_id": "t"})

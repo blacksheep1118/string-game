@@ -4,6 +4,8 @@
 剧情数据、游戏状态和选择结算统一从这里导入。
 """
 
+__version__ = "1.0.0"
+
 from .engine import (
     ATTR_MIN,
     ATTR_NAMES,

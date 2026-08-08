@@ -22,6 +22,7 @@ class StoryIntegrityTest(unittest.TestCase):
         quality = graph_quality(NODES)
         self.assertEqual(quality["unreachable"], [])
         self.assertEqual(len(quality["endings"]), 79)
+        self.assertEqual(quality["semantic_duplicates"], [])
 
     def test_story_validator_handles_bad_choice_shape(self):
         errors = validate_nodes({"start": {"title": "t", "text": "x", "choices": ["bad"]}}, ATTR_NAMES)
@@ -48,6 +49,8 @@ class StoryIntegrityTest(unittest.TestCase):
                 self.assertIn(trigger.get("ending"), endings, achievement.get("id"))
         all_endings = next(a for a in achievements if a.get("id") == "all_endings")
         self.assertEqual(all_endings["trigger"]["count"], len(endings))
+        pill_true = next(a for a in achievements if a.get("id") == "pill_true_ending")
+        self.assertEqual(pill_true["trigger"]["ending"], "end_pill_saint")
 
     def test_graph_quality_helpers(self):
         nodes = {
@@ -72,6 +75,7 @@ class StoryIntegrityTest(unittest.TestCase):
         quality = graph_quality(nodes)
         self.assertEqual(quality["unreachable"], ["orphan"])
         self.assertEqual(quality["endings"], ["end", "orphan"])
+        self.assertEqual(len(quality["semantic_duplicates"]), 1)
 
         with tempfile.TemporaryDirectory() as tmp:
             game = Game()

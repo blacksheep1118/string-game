@@ -117,6 +117,8 @@ class AchievementSystem:
             return values[0] - values[1] >= diff
 
         if trigger_type == "path_length":
+            if not context.get("is_ending", False):
+                return False
             path_length = context.get("path_length", 0)
             if "max" in trigger:
                 return path_length <= trigger["max"]

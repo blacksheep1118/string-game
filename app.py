@@ -28,12 +28,31 @@ from xiantu.engine import (
     apply_character_setup,
 )
 from xiantu.story import NODES
-from playability import infer_route
-from save_manager import delete_save, list_saves, load_save, save_game as write_game_save
+from achievement_system import AchievementSystem
+from playability import (
+    BONUS_ENDING_TEXT,
+    BONUS_ENDING_TITLE,
+    bonus_ending_available,
+    check_achievements,
+    infer_route,
+    daily_fortune,
+    read_progress_records,
+    record_bonus_ending,
+    record_ending as record_shared_ending,
+    update_progression,
+)
+from save_manager import (
+    delete_save,
+    list_saves,
+    load_save,
+    save_game as write_game_save,
+    validate_save_payload,
+)
 from theme_tokens import DARK_THEME, LIGHT_THEME
 
 SAVE_DIR = os.environ.get("XIANTU_SAVE_DIR", os.path.join(APP_DIR, "saves"))
 EXPORT_DIR = os.path.join(APP_DIR, "exports")
+DATA_DIR = os.path.join(RESOURCE_DIR, "data")
 
 # ============================================================
 # 字体回退 — 根据当前系统选择可用中文字体
@@ -118,6 +137,8 @@ class XianTuApp:
         self.saved_theme = "dark"
         self.saved_font_scale = 0
         self._load_persist()
+        self.achievement_system = AchievementSystem(DATA_DIR)
+        self.achievement_system.load_unlocked(SAVE_DIR)
 
         # 主题 & 字号
         self.theme = self.saved_theme  # dark / light
@@ -128,8 +149,7 @@ class XianTuApp:
         self.timer_seconds = 0
 
         # 今日运势
-        self.daily_fortune = random.choice(["大吉", "吉", "中吉", "小吉", "末吉"])
-        self.fortune_bonus = {"大吉": 5, "吉": 3, "中吉": 1, "小吉": 0, "末吉": -3}[self.daily_fortune]
+        self.daily_fortune, self.fortune_bonus = daily_fortune()
 
         # 窗口启动动画
         self.root.attributes("-alpha", 0.0)
@@ -411,7 +431,7 @@ class XianTuApp:
         if self.cleared_chapters:
             menu_items.append(("6", "章节选择", self.show_chapter_select))
         total_endings = sum(1 for story_node in NODES.values() if not story_node.get("choices"))
-        if self.endings_count >= total_endings:
+        if bonus_ending_available(SAVE_DIR, NODES):
             menu_items.append(("★", "隐藏结局", self._start_bonus_ending))
 
         for key, text, cmd in menu_items:
@@ -662,7 +682,10 @@ class XianTuApp:
 
             # 炼丹小游戏 — 特定节点
             if self.game.current_node in ("ch4_pill_power_1", "ch4_pill_power_3", "ch4_pill_heal_2"):
-                self._pill_mini_game()
+                self._maybe_start_pill()
+            # 剑修路线的实战试炼 — 只在首次进入节点时触发，完成状态随存档保留。
+            if self.game.current_node == "sword_tactic":
+                self._maybe_start_combat()
 
         self._render_attrs()
         self._update_scroll()
@@ -706,33 +729,15 @@ class XianTuApp:
         self.root.bind("3", lambda e: self.show_main_menu())
 
     def _record_ending(self):
-        os.makedirs(SAVE_DIR, exist_ok=True)
-        node = NODES.get(self.game.current_node, {})
-        gallery_file = os.path.join(SAVE_DIR, "_gallery.json")
-        gallery = _read_json_list(gallery_file)
-        record = {
-            "title": node.get("title", ""),
-            "player_name": self.game.player_name,
-            "trait": self.game.trait,
-            "attrs": self.game.attrs,
-            "path_count": len(self.game.path_history),
-            "achieved_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        }
-        existing = [e for e in gallery if e.get("title", "") == node.get("title", "")]
-        if not existing:
-            gallery.append(record)
-            with open(gallery_file, "w", encoding="utf-8") as f:
-                json.dump(gallery, f, ensure_ascii=False, indent=2)
-
-        # 排行榜记录
-        self._save_leaderboard(node.get("title", ""))
+        settlement = record_shared_ending(SAVE_DIR, self.game, NODES)
 
         # 章节追踪
         for nid in self.game.path_history:
             ch = self._get_chapter(NODES.get(nid, {}).get("title", ""))
             if ch: self.cleared_chapters.add(ch)
-        self.endings_count = len(gallery)
+        self.endings_count = len(settlement["gallery"])
         self._save_persist()
+        return settlement
 
     def _make_choice(self, idx):
         node = NODES.get(self.game.current_node)
@@ -760,6 +765,8 @@ class XianTuApp:
     # ============================================================
     def save_game(self):
         filename = self._do_save()
+        update_progression(SAVE_DIR, increments={"save_count": 1})
+        self._check_achievements()
         self._toast(f"已保存: {filename}")
 
     def show_load_dialog(self):
@@ -803,7 +810,11 @@ class XianTuApp:
         self._update_scroll()
 
     def _load_game(self, filename):
-        d = load_save(SAVE_DIR, filename)
+        try:
+            d = validate_save_payload(load_save(SAVE_DIR, filename), NODES, ATTR_NAMES)
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            messagebox.showerror("读取失败", str(exc) or "存档格式无效")
+            return
         self._stop_timer()
         self.undo_stack.clear()
         self.game = Game()
@@ -822,6 +833,8 @@ class XianTuApp:
             self.show_new_game_name()
 
     def show_gallery(self):
+        update_progression(SAVE_DIR, flags={"viewed_gallery": True})
+        self._check_achievements(viewed_gallery=True)
         gallery_file = os.path.join(SAVE_DIR, "_gallery.json")
         gallery = _read_json_list(gallery_file)
 
@@ -829,7 +842,7 @@ class XianTuApp:
         tk.Label(self.content_inner, text="结局画廊", font=(*FONT, 16, "bold"),
                  fg=C["gold"], bg=C["panel"]).pack(pady=(30, 5))
         total_endings = sum(1 for story_node in NODES.values() if not story_node.get("choices"))
-        tk.Label(self.content_inner, text=f"已收集: {len(gallery)} / {total_endings}",
+        tk.Label(self.content_inner, text=f"已收集: {len(gallery)} / {total_endings + 1}",
                  font=(*FONT, 10), fg=C["text_dim"], bg=C["panel"]).pack(pady=(0, 15))
 
         if not gallery:
@@ -926,43 +939,7 @@ class XianTuApp:
         self.content_canvas.yview_moveto(0)
 
     # ============================================================
-    # 1. 暗雷事件系统
-    # ============================================================
-    def _trigger_random_event(self):
-        luck = self.game.attrs.get("幸运", 20)
-        events = [
-            ("路边遗宝", "你在一棵古树下发现了一个破旧的包裹……", {"幸运": 3, "悟性": 1}),
-            ("妖兽夜袭", "夜晚营地被一头落单妖兽突袭！你持剑迎战……", {"根骨": 2}),
-            ("山洞奇遇", "避雨时误入一个山洞，壁上刻着残缺的古功法……", {"悟性": 3}),
-            ("老人赠书", "一位路过的老修士见你顺眼，赠你一本心得笔记。", {"悟性": 2, "精神": 1}),
-            ("灵泉沐浴", "你发现了一处隐秘的灵泉，沐浴后神清气爽。", {"根骨": 2, "精神": 2}),
-            ("黑市偶遇", "误入地下黑市，见识了修仙界的另一面。", {"魅力": 2, "幸运": 1}),
-            ("天降陨铁", "一颗流星坠落在不远处，竟是一块天外陨铁！", {"幸运": 3, "根骨": 1}),
-            ("迷路困境", "在山中迷路三天，但也因此磨练了意志。", {"精神": 3}),
-        ]
-        probs = [max(10, luck - i * 5) for i in range(len(events))]
-        total = sum(probs)
-        r = random.randint(1, total)
-        cum = 0
-        chosen = events[0]
-        for evt, p in zip(events, probs):
-            cum += p
-            if r <= cum:
-                chosen = evt
-                break
-
-        name, desc, effects = chosen
-        msg = f"【随机事件】{name}\n\n{desc}\n\n"
-        for k, v in effects.items():
-            self.game.attrs[k] = self.game.attrs.get(k, 0) + v
-            sign = "+" if v > 0 else ""
-            msg += f"  {k} {sign}{v}\n"
-
-        messagebox.showinfo("机缘降临", msg)
-        self._render_attrs()
-
-    # ============================================================
-    # 2. 全结局彩蛋 — SS+ 隐藏结局
+    # 全结局彩蛋 — SS+ 隐藏结局
     # ============================================================
     def _start_bonus_ending(self):
         self.game = Game()
@@ -973,21 +950,19 @@ class XianTuApp:
         self.last_chapter = ""
         self.auto_save_file = ""
 
+        try:
+            settlement = record_bonus_ending(SAVE_DIR, self.game, NODES)
+        except ValueError as exc:
+            self._toast("隐藏结局暂未解锁: " + str(exc))
+            self.show_main_menu()
+            return
+        self.endings_count = len(settlement["gallery"])
+        self._save_persist()
+
         self._clear_content()
-        tk.Label(self.content_inner, text="—— 隐藏结局：天命所归 ——",
+        tk.Label(self.content_inner, text=f"—— {BONUS_ENDING_TITLE} ——",
                  font=(*FONT, 14, "bold"), fg=C["gold"], bg=C["panel"]).pack(pady=(30, 15))
-        text = (
-            "你已踏遍仙途的每一个角落，见证了所有的命运分支。\n\n"
-            f"{sum(1 for story_node in NODES.values() if not story_node.get('choices'))}种结局在你心中汇聚成河——\n"
-            "你终于明白，仙途不是一条路，而是万千可能性的总和。\n\n"
-            "天道有常，众生皆苦。\n"
-            "而你，已超脱其中。\n\n"
-            "═══════════════════\n"
-            "  🏆 达成隐藏结局：天命所归\n"
-            "  评价：SS+ —— 你已洞悉一切\n"
-            "═══════════════════"
-        )
-        tk.Label(self.content_inner, text=text, font=(*FONT, 11),
+        tk.Label(self.content_inner, text=BONUS_ENDING_TEXT, font=(*FONT, 11),
                  fg=C["text"], bg=C["panel"], justify="left",
                  wraplength=700).pack(padx=30, pady=10)
 
@@ -996,18 +971,6 @@ class XianTuApp:
         self.root.bind("1", lambda e: self.show_main_menu())
         self._render_attrs()
         self._update_scroll()
-
-        # 记录
-        os.makedirs(SAVE_DIR, exist_ok=True)
-        node = {"title": "【隐藏结局】天命所归  评价：SS+——你已洞悉一切"}
-        gallery_file = os.path.join(SAVE_DIR, "_gallery.json")
-        gallery = _read_json_list(gallery_file)
-        if not any(e.get("title","") == node["title"] for e in gallery):
-            gallery.append({"title": node["title"], "player_name": "天命者", "trait": "万法归一",
-                           "attrs": self.game.attrs, "path_count": 0,
-                           "achieved_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")})
-            with open(gallery_file, "w", encoding="utf-8") as f:
-                json.dump(gallery, f, ensure_ascii=False, indent=2)
 
     # ============================================================
     # 4. 章节选择
@@ -1072,19 +1035,33 @@ class XianTuApp:
         if sys.platform != "win32":
             self.bgm_on = False
             self.bgm_btn.configure(text="🔇")
+            update_progression(SAVE_DIR, flags={"changed_settings": True})
+            self._check_achievements(changed_settings=True)
             self._toast("桌面音效仅支持 Windows；浏览器版支持全平台音效")
             return
         self.bgm_on = not self.bgm_on
         self.bgm_btn.configure(text="🔊" if self.bgm_on else "🔇")
+        update_progression(SAVE_DIR, flags={"changed_settings": True})
+        self._check_achievements(changed_settings=True)
         if self.bgm_on:
             self._start_bgm()
 
     # ============================================================
     # 7. 炼丹小游戏
     # ============================================================
+    def _maybe_start_pill(self):
+        marker = f"mini:{self.game.current_node}"
+        completed = self.game.flags.setdefault("minigames", [])
+        if marker in completed:
+            return
+        if self._pill_mini_game():
+            completed.append(marker)
+            self._check_achievements()
+            self._render_attrs()
+
     def _pill_mini_game(self):
          if not messagebox.askyesno("炼丹", "炼丹炉火候需要调控。\n按确认开始控火……"):
-             return
+             return False
          result = messagebox.askquestion("控火", "火势渐旺！\n—— 减小火力？ ——",
                                         icon="question")
          if result == "yes":
@@ -1105,6 +1082,7 @@ class XianTuApp:
                  messagebox.showinfo("化险为夷", "及时降温，丹药保住了。\n精神 +2")
              else:
                  messagebox.showinfo("炸炉", "丹炉爆炸……但你在爆炸中悟到了一些东西。")
+         return True
 
     # ============================================================
     # 8. 角色立绘
@@ -1135,38 +1113,6 @@ class XianTuApp:
                     "    │ ◉ │\n"
                     "    ╰───╯")
         return ""
-
-    # ============================================================
-    # 9. 排行榜
-    # ============================================================
-    def _save_leaderboard(self, ending_title):
-        os.makedirs(SAVE_DIR, exist_ok=True)
-        lb_file = os.path.join(SAVE_DIR, "_leaderboard.json")
-        lb = _read_json_list(lb_file)
-
-        score = sum(self.game.attrs.values())
-        # 提取评价
-        rank = "?"
-        for r in ["SS", "S", "A", "B", "C", "D"]:
-            if r in ending_title[:30]:
-                rank = r
-                break
-        rank_mult = {"SS": 300, "S": 200, "A": 150, "B": 100, "C": 50, "D": 30}.get(rank, 50)
-        total_score = score + rank_mult + len(self.game.path_history)
-
-        lb.append({
-            "player": self.game.player_name,
-            "ending": ending_title.replace("【结局】", ""),
-            "rank": rank,
-            "score": total_score,
-            "attrs_total": score,
-            "decisions": len(self.game.path_history),
-            "date": datetime.now().strftime("%m-%d %H:%M"),
-        })
-        lb.sort(key=lambda x: x["score"], reverse=True)
-        lb = lb[:50]  # 保留前50
-        with open(lb_file, "w", encoding="utf-8") as f:
-            json.dump(lb, f, ensure_ascii=False, indent=2)
 
     def show_leaderboard(self):
         lb_file = os.path.join(SAVE_DIR, "_leaderboard.json")
@@ -1256,7 +1202,9 @@ class XianTuApp:
     def _toggle_theme(self):
         self.theme = "light" if self.theme == "dark" else "dark"
         self._apply_theme()
+        update_progression(SAVE_DIR, flags={"changed_settings": True})
         self._save_persist()
+        self._check_achievements(changed_settings=True)
         self.show_main_menu()
 
     def _cycle_font_size(self):
@@ -1264,42 +1212,46 @@ class XianTuApp:
         self.font_scale = order[(order.index(self.font_scale) + 1) % len(order)]
         sizes = {-1: "小", 0: "中", 1: "大"}
         self._toast(f"字号: {sizes[self.font_scale]}")
+        update_progression(SAVE_DIR, flags={"changed_settings": True})
         self._save_persist()
         self.show_main_menu()
+        self._check_achievements(changed_settings=True)
 
     def _sized_font(self, base_size, *styles):
         return (*FONT, base_size + self.font_scale * 2, *styles)
 
     # ============================================================
-    # 打字机效果
-    # ============================================================
-    def _typewriter_show(self, text, callback, container=None):
-        """逐字显示文本，完成后调用 callback"""
-        if container is None:
-            container = self.content_inner
-        label = tk.Label(container, text="", font=self._sized_font(11),
-                         fg=C["text"], bg=C["panel"], anchor="w", justify="left",
-                         wraplength=720)
-        label.pack(anchor="w", pady=1)
-
-        lines = text.strip().split("\n")
-        all_chars = []
-        for line in lines:
-            all_chars.extend(list(line))
-            all_chars.append("\n")
-
-        def reveal(idx=0):
-            if idx < len(all_chars):
-                current = label.cget("text") + all_chars[idx]
-                label.configure(text=current)
-                self.root.after(25, lambda: reveal(idx + 1))
-            elif callback:
-                callback()
-        reveal()
-
-    # ============================================================
     # 回合制战斗
     # ============================================================
+    def _maybe_start_combat(self):
+        marker = f"mini:{self.game.current_node}"
+        completed = self.game.flags.setdefault("minigames", [])
+        if marker in completed:
+            return
+        self.root.after(80, lambda: self._initiate_combat(
+            "铁甲妖兽",
+            105,
+            self._combat_won,
+            self._combat_lost,
+        ))
+
+    def _combat_won(self):
+        self.game.flags.setdefault("minigames", []).append(f"mini:{self.game.current_node}")
+        self.game.attrs["根骨"] = self.game.attrs.get("根骨", 0) + 2
+        self.game.resources["历练"] = self.game.resources.get("历练", 0) + 3
+        self.game.affinity["战斗经验"] = self.game.affinity.get("战斗经验", 0) + 1
+        self._toast("⚔️ 试炼胜利：根骨 +2，历练 +3")
+        self._check_achievements()
+        self._render_attrs()
+
+    def _combat_lost(self):
+        self.game.flags.setdefault("minigames", []).append(f"mini:{self.game.current_node}")
+        self.game.attrs["精神"] = self.game.attrs.get("精神", 0) + 1
+        self.game.resources["心魔"] = self.game.resources.get("心魔", 0) + 1
+        self._toast("试炼受挫：精神 +1，心魔 +1")
+        self._check_achievements()
+        self._render_attrs()
+
     def _initiate_combat(self, enemy_name, enemy_hp, on_win, on_lose):
         self.game.combat_stats = {"hp": 100, "max_hp": 100}
         dialog = tk.Toplevel(self.root)
@@ -1310,6 +1262,7 @@ class XianTuApp:
         dialog.grab_set()
 
         enemy = {"name": enemy_name, "hp": enemy_hp, "max_hp": enemy_hp}
+        rng = getattr(self.game, "rng", random)
 
         def update_ui():
             for w in frame.winfo_children(): w.destroy()
@@ -1325,7 +1278,8 @@ class XianTuApp:
         update_ui()
 
         def player_attack():
-            dmg = random.randint(15, 30) + self.game.attrs.get("根骨", 20) // 5
+            artifact_bonus = 5 if "青霜剑" in self.game.artifacts else 0
+            dmg = rng.randint(15, 30) + self.game.attrs.get("根骨", 20) // 5 + artifact_bonus
             enemy["hp"] -= dmg
             if enemy["hp"] <= 0:
                 dialog.destroy()
@@ -1334,7 +1288,7 @@ class XianTuApp:
                 on_win()
                 return
             # 敌人反击
-            edmg = random.randint(10, 25)
+            edmg = rng.randint(10, 25)
             self.game.combat_stats["hp"] -= edmg
             if self.game.combat_stats["hp"] <= 0:
                 dialog.destroy()
@@ -1343,7 +1297,7 @@ class XianTuApp:
             update_ui()
 
         def player_defend():
-            edmg = max(0, random.randint(10, 25) - self.game.attrs.get("精神", 20) // 4)
+            edmg = max(0, rng.randint(10, 25) - self.game.attrs.get("精神", 20) // 4)
             self.game.combat_stats["hp"] -= edmg
             if self.game.combat_stats["hp"] <= 0:
                 dialog.destroy()
@@ -1359,102 +1313,36 @@ class XianTuApp:
         dialog.bind("2", lambda e: player_defend())
 
     # ============================================================
-    # 法宝 / 丹药 / 好感度 渲染
-    # ============================================================
-    def _render_extras(self, container):
-        """在属性面板下方显示法宝/丹药/好感/声望"""
-        extras = tk.Frame(container, bg=C["bg"])
-        extras.pack(fill="x", pady=2)
-
-        if self.game.artifacts:
-            tk.Label(extras, text="法宝: " + " ".join(self.game.artifacts),
-                     font=self._sized_font(8), fg=C["gold"], bg=C["bg"]).pack(side="left", padx=5)
-        if self.game.inventory:
-            tk.Label(extras, text="丹药: " + " ".join(self.game.inventory),
-                     font=self._sized_font(8), fg="#6b8e6b", bg=C["bg"]).pack(side="left", padx=5)
-        if self.game.affinity:
-            top_npc = sorted(self.game.affinity.items(), key=lambda x: x[1], reverse=True)[:3]
-            npc_str = " ".join(f"{k}:{v}" for k, v in top_npc)
-            tk.Label(extras, text="羁绊: " + npc_str,
-                     font=self._sized_font(8), fg=C["text_dim"], bg=C["bg"]).pack(side="left", padx=5)
-        rep = self.game.reputation
-        if any(rep.values()):
-            rp = f"正{rep['正道']} 魔{rep['魔道']} 散{rep['散修']}"
-            tk.Label(extras, text="声望: " + rp,
-                     font=self._sized_font(8), fg=C["accent"], bg=C["bg"]).pack(side="left", padx=5)
-
-    # ============================================================
     # 成就检查
     # ============================================================
-    def _check_achievements(self):
-        new_achs = []
-        total_attrs = sum(self.game.attrs.values())
-        a = self.game.attrs
-
-        checks = [
-            ("初入仙途", lambda: len(self.game.path_history) >= 3),
-            ("初露锋芒", lambda: len(self.game.path_history) >= 10),
-            ("身经百战", lambda: len(self.game.path_history) >= 25),
-            ("根骨过人", lambda: a.get("根骨", 0) >= 40),
-            ("鸿运当头", lambda: a.get("幸运", 0) >= 40),
-            ("魅力无双", lambda: a.get("魅力", 0) >= 40),
-            ("意志如钢", lambda: a.get("精神", 0) >= 40),
-            ("天资卓绝", lambda: a.get("悟性", 0) >= 40),
-            ("全能修士", lambda: total_attrs >= 250),
-            ("法宝收集者", lambda: len(self.game.artifacts) >= 3),
-            ("炼丹大师", lambda: len(self.game.inventory) >= 5),
-            ("人脉广阔", lambda: len(self.game.affinity) >= 3),
-            ("正道之光", lambda: self.game.reputation.get("正道", 0) >= 10),
-            ("散修传奇", lambda: self.game.reputation.get("散修", 0) >= 10),
-            ("速通达人", lambda: self.timer_seconds > 0 and self.timer_seconds < 180),
-            ("今日大吉", lambda: self.daily_fortune == "大吉"),
-            ("不屈不挠", lambda: getattr(self, '_death_count', 0) >= 3),
-            ("全结局达成", lambda: self.endings_count >= sum(1 for story_node in NODES.values() if not story_node.get("choices"))),
-            ("十周目老玩家", lambda: self.endings_count >= 10),
-            ("挑战者", lambda: self.game.challenge_mode),
-        ]
-
-        for name, condition in checks:
-            if name not in self.achievements:
-                try:
-                    if condition():
-                        self.achievements.add(name)
-                        new_achs.append(name)
-                except Exception:
-                    continue
-
+    def _check_achievements(self, *, viewed_gallery=False, viewed_destiny_map=False,
+                            changed_settings=False):
+        if not self.game.trait and (viewed_gallery or viewed_destiny_map or changed_settings):
+            update_progression(
+                SAVE_DIR,
+                flags={
+                    "viewed_gallery": viewed_gallery,
+                    "viewed_destiny_map": viewed_destiny_map,
+                    "changed_settings": changed_settings,
+                },
+            )
+            return []
+        new_achs = check_achievements(
+            SAVE_DIR,
+            DATA_DIR,
+            self.game,
+            NODES,
+            viewed_gallery=viewed_gallery,
+            viewed_destiny_map=viewed_destiny_map,
+            changed_settings=changed_settings,
+        )
+        self.achievement_system.load_unlocked(SAVE_DIR)
         if new_achs:
+            self.achievements.update(item.get("name", "") for item in new_achs if item.get("name"))
             self._save_persist()
             for ach in new_achs:
-                self._toast(f"🏆 达成成就: {ach}")
-
+                self._toast(f"{ach.get('icon', '🏆')} 达成成就: {ach.get('name', '')}")
         return new_achs
-
-    # ============================================================
-    # 章节背景
-    # ============================================================
-    def _draw_chapter_bg(self, chapter_num):
-        bg_canvas = getattr(self, '_bg_canvas', None)
-        if not bg_canvas:
-            self._bg_canvas = tk.Canvas(self.content_canvas, highlightthickness=0, bg=C["panel"])
-            self._bg_canvas.place(relwidth=1, relheight=1)
-            bg_canvas = self._bg_canvas
-        bg_canvas.delete("all")
-        w, h = 800, 400
-        colors = {"〇": ("#3a3020", "#2a2218"), "一": ("#3a3020", "#2a2218"),
-                  "二": ("#4a4030", "#3a2a1a"), "三": ("#3a4a30", "#2a3a1a"),
-                  "四": ("#4a3030", "#3a1a1a"), "五": ("#3a3040", "#2a1a3a"),
-                  "六": ("#403a20", "#3a3010"), "七": ("#304030", "#1a301a"),
-                  "八": ("#403030", "#301010"), "九": ("#303040", "#101030"),
-                  "终": ("#303030", "#101010")}
-        c1, c2 = colors.get(chapter_num[1] if len(chapter_num) > 1 else "一", colors["一"])
-        # 简笔山峦
-        for i in range(3):
-            x0 = random.randint(50, 300) * (i + 1) * 0.5
-            bg_canvas.create_arc(x0, h - 80 - i * 30, x0 + 300, h + 50, start=180, extent=180,
-                                 fill=c2, outline="")
-        # 月亮
-        bg_canvas.create_oval(600, 50, 700, 150, fill="#c9a96e", outline="")
 
     # ============================================================
     # 设置面板
@@ -1486,25 +1374,24 @@ class XianTuApp:
     # 成就列表
     # ============================================================
     def show_achievements(self):
-        all_achs = [
-            "初入仙途", "初露锋芒", "身经百战", "根骨过人", "鸿运当头",
-            "魅力无双", "意志如钢", "天资卓绝", "全能修士", "法宝收集者",
-            "炼丹大师", "人脉广阔", "正道之光", "散修传奇", "速通达人",
-            "今日大吉", "不屈不挠", "全结局达成", "十周目老玩家", "挑战者",
-        ]
+        self.achievement_system.load_unlocked(SAVE_DIR)
+        achievements = self.achievement_system.get_all_visible()
+        stats = self.achievement_system.get_stats()
         self._clear_content()
         tk.Label(self.content_inner, text="成就列表", font=self._sized_font(16, "bold"),
                  fg=C["gold"], bg=C["panel"]).pack(pady=(30, 5))
-        tk.Label(self.content_inner, text=f"已解锁: {len(self.achievements)} / {len(all_achs)}",
+        tk.Label(self.content_inner, text=f"已解锁: {stats['unlocked']} / {stats['total']}  ·  完成度 {stats['progress']}%",
                  font=self._sized_font(10), fg=C["text_dim"], bg=C["panel"]).pack()
 
-        for ach in all_achs:
-            unlocked = ach in self.achievements
-            icon = "★" if unlocked else "☆"
+        for ach in achievements:
+            unlocked = ach.get("unlocked", False)
+            icon = ach.get("icon", "🏆") if unlocked else "◇"
             color = C["gold"] if unlocked else C["text_dim"]
-            tk.Label(self.content_inner, text=f"  {icon}  {ach}",
+            name = ach.get("name", "未解锁") if unlocked or not ach.get("hidden") else "隐藏成就"
+            desc = ach.get("desc", "达成特定条件后揭晓") if unlocked or not ach.get("hidden") else "探索更多路线以揭晓条件"
+            tk.Label(self.content_inner, text=f"  {icon}  {name}  [{ach.get('category', '其他')}]\n      {desc}",
                      font=self._sized_font(11), fg=color, bg=C["panel"],
-                     anchor="w").pack(fill="x", padx=40, pady=2)
+                     anchor="w", justify="left").pack(fill="x", padx=40, pady=4)
 
         self._big_choice(self.content_inner, "Esc", "返回", self.show_settings).pack(pady=15)
         self.root.bind("<Escape>", lambda e: self.show_settings())
@@ -1542,6 +1429,8 @@ class XianTuApp:
     # 结局树可视化
     # ============================================================
     def show_ending_tree(self):
+        update_progression(SAVE_DIR, flags={"viewed_destiny_map": True})
+        self._check_achievements(viewed_destiny_map=True)
         self._clear_content()
         tk.Label(self.content_inner, text="结局树", font=self._sized_font(16, "bold"),
                  fg=C["gold"], bg=C["panel"]).pack(pady=(30, 5))
@@ -1680,12 +1569,12 @@ class XianTuApp:
     # 快捷键绑定（F12截图, Ctrl+E导出, Ctrl+T TTS）
     # ============================================================
     def _bind_global_keys(self):
-        self.root.bind("<F12>", lambda e: self._take_screenshot())
-        self.root.bind("<Control-e>", lambda e: self._export_ending_text())
-        self.root.bind("<Control-t>", lambda e: self._tts_speak(
+        self.root.bind_all("<F12>", lambda e: self._take_screenshot())
+        self.root.bind_all("<Control-e>", lambda e: self._export_ending_text())
+        self.root.bind_all("<Control-t>", lambda e: self._tts_speak(
             NODES.get(self.game.current_node, {}).get("text", "")))
-        self.root.bind("<Control-z>", lambda e: self._undo_choice())
-        self.root.bind("<question>", lambda e: self._show_shortcuts())
+        self.root.bind_all("<Control-z>", lambda e: self._undo_choice())
+        self.root.bind_all("<question>", lambda e: self._show_shortcuts())
 
     # ============================================================
     # 撤销 / 快捷键帮助 / 清空存档 / 跳过已读
@@ -1726,18 +1615,6 @@ class XianTuApp:
         self.endings_count = 0
         self._save_persist()
         self._toast("所有存档已清除")
-
-    # ============================================================
-    # 战斗 HP 可视化
-    # ============================================================
-    def _draw_hp_bar(self, canvas, x, y, w, h, current, max_val, label=""):
-        canvas.create_text(x, y - 8, text=label, font=(*FONT, 10), fill=C["text"], anchor="w")
-        canvas.create_rectangle(x, y, x + w, y + h, outline=C["border"], fill=C["border"])
-        pct = max(0, current / max(max_val, 1))
-        color = "#6b8e6b" if pct > 0.5 else "#c9a96e" if pct > 0.2 else C["danger"]
-        canvas.create_rectangle(x, y, x + w * pct, y + h, fill=color, outline="")
-        canvas.create_text(x + w / 2, y + h / 2, text=f"{current}/{max_val}",
-                          font=(*FONT, 8, "bold"), fill=C["white"])
 
     # ============================================================
     # 加载画面

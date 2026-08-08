@@ -4,9 +4,10 @@ import json
 import os
 import sys
 import argparse
+import re
 import socket
+import threading
 import time
-from datetime import datetime
 
 from flask import Flask, jsonify, request, send_file, send_from_directory
 
@@ -20,7 +21,6 @@ else:
 
 sys.path.insert(0, RESOURCE_DIR)
 from xiantu.engine import (
-    ATTR_MIN,
     ATTR_NAMES,
     Game,
     apply_character_setup,
@@ -40,6 +40,9 @@ from save_manager import (
 )
 from playability import (
     ACHIEVEMENT_HINTS,
+    BONUS_ENDING_TEXT,
+    BONUS_ENDING_TITLE,
+    bonus_ending_available,
     choice_hints,
     destiny_map,
     ensure_gameplay_state,
@@ -48,8 +51,15 @@ from playability import (
     load_progression,
     mini_game_for,
     PIVOTAL_NODES,
-    record_progression,
+    check_achievements,
+    daily_fortune,
+    quick_restart_game,
+    record_ending,
+    record_bonus_ending,
+    read_progress_records,
+    resolve_mini_game,
     score_summary,
+    update_progression,
 )
 from achievement_system import AchievementSystem
 
@@ -61,7 +71,11 @@ app = Flask(__name__, static_folder=STATIC_DIR, static_url_path="")
 games: dict[str, Game] = {}
 game_last_seen: dict[str, float] = {}
 SESSION_TTL_SECONDS = 60 * 60 * 6
+MAX_SESSIONS = 512
+SESSION_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
+GAME_LOCK = threading.RLock()
 SAVE_DIR = os.environ.get("XIANTU_SAVE_DIR", os.path.join(APP_DIR, "saves"))
+app.config["MAX_CONTENT_LENGTH"] = 1 * 1024 * 1024
 
 # 成就系统实例
 achievement_system = AchievementSystem(DATA_DIR)
@@ -74,6 +88,47 @@ def safe_save_path(filename: str) -> str:
 
 def error_response(message: str, code: str = "bad_request", status: int = 400):
     return jsonify({"ok": False, "error": message, "code": code}), status
+
+
+SESSION_ROUTES = {
+    "/api/new_game",
+    "/api/set_attrs",
+    "/api/choice",
+    "/api/state",
+    "/api/save",
+    "/api/load",
+    "/api/record_ending",
+    "/api/bonus_ending",
+    "/api/restart",
+    "/api/destiny_map",
+    "/api/quick_restart",
+    "/api/progression_event",
+    "/api/mini_game",
+}
+
+
+def is_valid_session_id(value: object) -> bool:
+    return isinstance(value, str) and bool(SESSION_ID_RE.fullmatch(value))
+
+
+@app.before_request
+def validate_api_request():
+    """在进入路由前拒绝非对象 JSON 和危险 session key。"""
+
+    if request.path not in SESSION_ROUTES:
+        if request.path == "/api/gallery":
+            sid = request.args.get("session_id", "")
+            if sid and not is_valid_session_id(sid):
+                return error_response("session_id 格式无效", "invalid_session", 400)
+        return None
+    if request.method != "POST":
+        return None
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return error_response("请求 JSON 必须是对象", "invalid_json", 400)
+    if not is_valid_session_id(payload.get("session_id", "default")):
+        return error_response("session_id 格式无效", "invalid_session", 400)
+    return None
 
 
 def touch_session(session_id: str) -> None:
@@ -118,6 +173,8 @@ def api_new_game():
     cleanup_sessions()
     data = request.get_json() or {}
     sid = data.get("session_id", "default")
+    if sid not in games and len(games) >= MAX_SESSIONS:
+        return error_response("当前在线游戏数量已达上限", "session_limit", 429)
     g = Game()
     ensure_gameplay_state(g)
     g.player_name = str(data.get("name") or "叶尘").strip()[:20] or "叶尘"
@@ -150,9 +207,10 @@ def api_set_attrs():
     trait_key = data.get("trait", "1")
     progression = load_progression(SAVE_DIR)
     legacy_bonus = min(10, int(progression.get("legacy_points", 0)))
+    _, fortune_bonus = daily_fortune()
     try:
         attrs = validate_attrs(attrs)
-        apply_character_setup(g, attrs, trait_key, legacy_bonus=legacy_bonus)
+        apply_character_setup(g, attrs, trait_key, fortune_bonus=fortune_bonus, legacy_bonus=legacy_bonus)
     except ValueError as exc:
         message = str(exc)
         if "整数" in message:
@@ -165,7 +223,9 @@ def api_set_attrs():
             code = "invalid_attrs"
         return error_response(message, code)
 
-    return jsonify(get_node_data(g))
+    node_data = get_node_data(g)
+    node_data["achievements"] = check_and_return_achievements(g, node_data)
+    return jsonify(node_data)
 
 
 @app.route("/api/choice", methods=["POST"])
@@ -178,21 +238,24 @@ def api_choice():
         return error_response("no game", "no_game")
     touch_session(sid)
 
-    try:
-        result = resolve_choice(g, data.get("choice", 0), NODES)
-    except ValueError as exc:
-        code = str(exc) if str(exc) in {"invalid_choice", "story_target_missing"} else "invalid_choice"
-        return error_response("invalid choice" if code == "invalid_choice" else "剧情目标不存在", code)
+    if not g.trait:
+        return error_response("请先完成角色属性与词条设置", "setup_required", 409)
+    with GAME_LOCK:
+        try:
+            result = resolve_choice(g, data.get("choice", 0), NODES)
+        except ValueError as exc:
+            code = str(exc) if str(exc) in {"invalid_choice", "story_target_missing"} else "invalid_choice"
+            return error_response("invalid choice" if code == "invalid_choice" else "剧情目标不存在", code)
 
-    data = get_node_data(g)
-    data["feedback"] = result["feedback"]
-    data["choice_result"] = {"passed": result["passed"], "from": result["from"]}
+        data = get_node_data(g)
+        data["feedback"] = result["feedback"]
+        data["choice_result"] = {"passed": result["passed"], "from": result["from"]}
 
-    # 检查成就
-    newly_unlocked = check_and_return_achievements(g, data)
-    data["achievements"] = newly_unlocked
+        # 检查成就
+        newly_unlocked = check_and_return_achievements(g, data)
+        data["achievements"] = newly_unlocked
 
-    return jsonify(data)
+        return jsonify(data)
 
 
 @app.route("/api/state", methods=["POST"])
@@ -207,6 +270,33 @@ def api_state():
     return jsonify(get_node_data(g))
 
 
+@app.route("/api/mini_game", methods=["POST"])
+def api_mini_game():
+    """执行当前节点的一次路线试炼，规则与终端入口共享。"""
+
+    cleanup_sessions()
+    data = request.get_json() or {}
+    sid = data.get("session_id", "default")
+    g = games.get(sid)
+    if not g:
+        return error_response("no game", "no_game")
+    if not g.trait:
+        return error_response("请先完成角色属性与词条设置", "setup_required", 409)
+    touch_session(sid)
+    with GAME_LOCK:
+        try:
+            feedback = resolve_mini_game(g, g.current_node, str(data.get("action", "")))
+        except ValueError as exc:
+            code = str(exc)
+            if code not in {"mini_game_node_mismatch", "invalid_mini_game_action", "mini_game_completed"}:
+                code = "invalid_mini_game"
+            return error_response(code, code)
+        node_data = get_node_data(g)
+        node_data["feedback"] = feedback
+        node_data["achievements"] = check_and_return_achievements(g, node_data)
+        return jsonify(node_data)
+
+
 @app.route("/api/save", methods=["POST"])
 def api_save():
     cleanup_sessions()
@@ -215,15 +305,25 @@ def api_save():
     g = games.get(sid)
     if not g:
         return error_response("no game", "no_game")
+    if not g.trait:
+        return error_response("请先完成角色属性与词条设置", "setup_required", 409)
     touch_session(sid)
 
     # 如果指定了 overwrite 文件名，覆盖该文件（不更新时间戳后缀）
     overwrite = data.get("overwrite", "")
-    try:
-        filename, save_data = save_game(SAVE_DIR, g, NODES, overwrite=overwrite)
-    except ValueError as exc:
-        return error_response(str(exc), "invalid_filename")
-    return jsonify({"ok": True, "filename": filename, "saved_at": save_data["saved_at"]})
+    with GAME_LOCK:
+        try:
+            filename, save_data = save_game(SAVE_DIR, g, NODES, overwrite=overwrite)
+        except ValueError as exc:
+            return error_response(str(exc), "invalid_filename")
+        update_progression(SAVE_DIR, increments={"save_count": 1})
+        achievements = check_and_return_achievements(g, get_node_data(g))
+        return jsonify({
+            "ok": True,
+            "filename": filename,
+            "saved_at": save_data["saved_at"],
+            "achievements": achievements,
+        })
 
 
 @app.route("/api/saves", methods=["GET"])
@@ -264,85 +364,60 @@ def api_record_ending():
     if not g:
         return error_response("no game", "no_game")
     touch_session(sid)
-    ensure_gameplay_state(g)
-
-    node = NODES.get(g.current_node, {})
-    if node.get("choices"):
-        return error_response("当前节点不是结局", "not_ending")
-    ending_title = node.get("title", "")
-
-    os.makedirs(SAVE_DIR, exist_ok=True)
-    gallery_file = os.path.join(SAVE_DIR, "_gallery.json")
-    gallery = read_gallery()
-    summary = score_summary(g, ending_title)
-
-    record = {
-        "title": ending_title,
-        "player_name": g.player_name,
-        "trait": g.trait,
-        "attrs": g.attrs,
-        "path_count": len(g.path_history),
-        "score": summary["score"],
-        "rank": summary["rank"],
-        "achieved_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-    }
-
-    # 去重：相同结局不重复记录
-    existing = [e for e in gallery if isinstance(e, dict) and e.get("title") == ending_title]
-    if not existing:
-        gallery.append(record)
-        with open(gallery_file, "w", encoding="utf-8") as f:
-            json.dump(gallery, f, ensure_ascii=False, indent=2)
-
-    leaderboard_file = os.path.join(SAVE_DIR, "_leaderboard.json")
-    leaderboard = []
-    if os.path.exists(leaderboard_file):
+    with GAME_LOCK:
+        ensure_gameplay_state(g)
         try:
-            with open(leaderboard_file, "r", encoding="utf-8") as f:
-                leaderboard = json.load(f)
-        except (OSError, json.JSONDecodeError):
-            leaderboard = []
-    if not isinstance(leaderboard, list):
-        leaderboard = []
-    cleaned_leaderboard = []
-    for item in leaderboard:
-        if not isinstance(item, dict):
-            continue
-        try:
-            item = dict(item)
-            item["score"] = int(item.get("score", 0))
-            item["path_count"] = int(item.get("path_count", 0))
-        except (TypeError, ValueError):
-            continue
-        cleaned_leaderboard.append(item)
-    leaderboard = cleaned_leaderboard
-    leaderboard.append({
-        "player_name": g.player_name,
-        "title": ending_title,
-        "rank": summary["rank"],
-        "score": summary["score"],
-        "path_count": len(g.path_history),
-        "achieved_at": record["achieved_at"],
-    })
-    leaderboard.sort(key=lambda item: (-item["score"], item["path_count"]))
-    with open(leaderboard_file, "w", encoding="utf-8") as f:
-        json.dump(leaderboard[:20], f, ensure_ascii=False, indent=2)
+            settlement = record_ending(SAVE_DIR, g, NODES)
+        except ValueError as exc:
+            return error_response(str(exc), "not_ending")
 
-    progression = record_progression(SAVE_DIR, g, ending_title)
-    ending_data = get_node_data(g)
-    newly_unlocked = check_and_return_achievements(g, ending_data)
-    return jsonify({
-        "ok": True,
-        "total": len(gallery),
-        "is_new": not existing,
-        "progression": progression,
-        "achievements": newly_unlocked,
-    })
+        newly_unlocked = check_and_return_achievements(g, get_node_data(g))
+        return jsonify({
+            "ok": True,
+            "total": len(settlement["gallery"]),
+            "is_new": settlement["is_new"],
+            "progression": settlement["progression"],
+            "score_summary": settlement["summary"],
+            "bonus_available": bonus_ending_available(SAVE_DIR, NODES),
+            "achievements": newly_unlocked,
+        })
+
+
+@app.route("/api/bonus_ending", methods=["POST"])
+def api_bonus_ending():
+    """在收集全部普通结局后记录一次隐藏结局。"""
+
+    cleanup_sessions()
+    data = request.get_json() or {}
+    sid = data.get("session_id", "default")
+    g = games.get(sid)
+    if not g:
+        return error_response("no game", "no_game")
+    if not g.trait:
+        return error_response("请先完成角色属性与词条设置", "setup_required", 409)
+    touch_session(sid)
+    with GAME_LOCK:
+        try:
+            settlement = record_bonus_ending(SAVE_DIR, g, NODES)
+        except ValueError as exc:
+            code = str(exc)
+            if code not in {"bonus_locked", "bonus_completed"}:
+                code = "bonus_unavailable"
+            return error_response(code, code)
+        payload = get_bonus_node_data(g)
+        payload["feedback"] = ["你已收集全部普通结局，隐藏命运向你敞开。"]
+        payload["achievements"] = check_and_return_achievements(g, payload)
+        payload["settlement"] = settlement["summary"]
+        return jsonify(payload)
 
 
 @app.route("/api/gallery", methods=["GET"])
 def api_gallery():
     """获取结局画廊"""
+    sid = request.args.get("session_id", "")
+    if sid and sid in games:
+        update_progression(SAVE_DIR, flags={"viewed_gallery": True})
+        check_and_return_achievements(games[sid], get_node_data(games[sid]))
     return jsonify(read_gallery())
 
 
@@ -351,7 +426,13 @@ def api_story_stats():
     """返回由当前剧情数据计算出的规模，避免前端写死旧统计。"""
 
     endings = sum(1 for node in NODES.values() if not node.get("choices"))
-    return jsonify({"ok": True, "nodes": len(NODES), "endings": endings})
+    return jsonify({
+        "ok": True,
+        "nodes": len(NODES),
+        "endings": endings,
+        "bonus_endings": 1,
+        "total_endings": endings + 1,
+    })
 
 
 @app.route("/api/achievements", methods=["GET"])
@@ -380,11 +461,8 @@ def api_leaderboard():
 
 @app.route("/api/fortune", methods=["GET"])
 def api_fortune():
-    import random
-    fortunes = ["大吉", "吉", "中吉", "小吉", "末吉"]
-    bonus = {"大吉": 5, "吉": 3, "中吉": 1, "小吉": 0, "末吉": -3}
-    f = random.choice(fortunes)
-    return jsonify({"fortune": f, "bonus": bonus[f]})
+    fortune, bonus = daily_fortune()
+    return jsonify({"fortune": fortune, "bonus": bonus})
 
 
 @app.route("/api/restart", methods=["POST"])
@@ -437,15 +515,7 @@ def api_import_save():
 
 
 def read_gallery() -> list[dict]:
-    gallery_file = os.path.join(SAVE_DIR, "_gallery.json")
-    if not os.path.exists(gallery_file):
-        return []
-    try:
-        with open(gallery_file, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        return [entry for entry in data if isinstance(entry, dict)] if isinstance(data, list) else []
-    except (OSError, json.JSONDecodeError):
-        return []
+    return read_progress_records(SAVE_DIR, "_gallery.json")
 
 
 @app.route("/api/progression", methods=["GET"])
@@ -453,45 +523,35 @@ def api_progression():
     return jsonify({"ok": True, "progression": load_progression(SAVE_DIR), "achievement_hints": ACHIEVEMENT_HINTS})
 
 
+@app.route("/api/progression_event", methods=["POST"])
+def api_progression_event():
+    data = request.get_json() or {}
+    sid = data.get("session_id", "default")
+    event = data.get("event", "")
+    if event not in {"changed_settings"}:
+        return error_response("不支持的进度事件", "invalid_event")
+    progression = update_progression(SAVE_DIR, flags={event: True})
+    achievements = []
+    game = games.get(sid)
+    if game:
+        achievements = check_and_return_achievements(game, get_node_data(game))
+    return jsonify({"ok": True, "progression": progression, "achievements": achievements})
+
+
 def check_and_return_achievements(g: Game, data: dict) -> list[dict]:
     """检查并返回新解锁的成就"""
-    ensure_gameplay_state(g)
-    achievement_system.load_unlocked(SAVE_DIR)
-
-    # 构建成就检查上下文
-    progression = load_progression(SAVE_DIR)
-    gallery = read_gallery()
-
-    context = {
-        "node_id": g.current_node,
-        "attrs": g.attrs,
-        "resources": g.resources,
-        "artifacts": g.artifacts,
-        "reputation": g.reputation,
-        "affinity": g.affinity,
-        "is_ending": data.get("is_ending", False),
-        "route": data.get("route", ""),
-        "rank": (data.get("score_summary") or {}).get("rank", "C"),
-        "score": (data.get("score_summary") or {}).get("score", 0),
-        "path_length": len(g.path_history),
-        "ending_count": len(gallery),
-        "insights": g.flags.get("insights", []),
-        "legacy_points": progression.get("legacy_points", 0),
-    }
-
-    # 检查新成就
-    newly_unlocked = achievement_system.check_achievements(context)
-
-    # 保存更新后的成就状态
-    if newly_unlocked:
-        achievement_system.save_unlocked(SAVE_DIR)
-
-    return newly_unlocked
+    del data  # 结算上下文由共享层从节点和状态重新计算，避免入口间漂移。
+    if not g.trait and NODES.get(g.current_node, {}).get("choices"):
+        return []
+    return check_achievements(SAVE_DIR, DATA_DIR, g, NODES)
 
 
 @app.route("/api/achievements_full", methods=["GET"])
 def api_achievements_full():
     """获取完整成就列表"""
+    sid = request.args.get("session_id", "")
+    if sid and sid in games:
+        check_and_return_achievements(games[sid], get_node_data(games[sid]))
     achievement_system.load_unlocked(SAVE_DIR)
     achievements = achievement_system.get_all_visible()
     stats = achievement_system.get_stats()
@@ -506,7 +566,15 @@ def api_destiny_map():
     current_path = []
     if g:
         current_path = list(g.path_history) + [g.current_node]
-    return jsonify({"ok": True, "map": destiny_map(NODES, current_path, read_gallery())})
+        update_progression(SAVE_DIR, flags={"viewed_destiny_map": True})
+        achievements = check_and_return_achievements(g, get_node_data(g))
+    else:
+        achievements = []
+    return jsonify({
+        "ok": True,
+        "map": destiny_map(NODES, current_path, read_gallery()),
+        "achievements": achievements,
+    })
 
 
 @app.route("/api/quick_restart", methods=["POST"])
@@ -516,20 +584,16 @@ def api_quick_restart():
     old = games.get(sid)
     if not old:
         return error_response("no game", "no_game")
-    ensure_gameplay_state(old)
-    g = Game()
-    ensure_gameplay_state(g)
-    g.player_name = old.player_name or "轮回者"
-    g.trait = old.trait
-    g.attrs = {k: max(ATTR_MIN, int(v)) for k, v in old.attrs.items()}
-    legacy = min(10, int(load_progression(SAVE_DIR).get("legacy_points", 0)))
-    g.attrs["幸运"] = g.attrs.get("幸运", 20) + legacy
-    g.resources["轮回"] = legacy
-    games[sid] = g
-    touch_session(sid)
-    data = get_node_data(g)
-    data["feedback"] = [f"轮回重启：保留角色倾向，幸运获得轮回加成 +{legacy}。"]
-    return jsonify(data)
+    if not old.trait:
+        return error_response("请先完成角色属性与词条设置", "setup_required", 409)
+    with GAME_LOCK:
+        g, legacy = quick_restart_game(old, SAVE_DIR)
+        games[sid] = g
+        touch_session(sid)
+        data = get_node_data(g)
+        data["feedback"] = [f"轮回重启：保留角色倾向，幸运获得轮回加成 +{legacy}。"]
+        data["achievements"] = check_and_return_achievements(g, data)
+        return jsonify(data)
 
 
 def get_node_data(g: Game) -> dict:
@@ -541,6 +605,7 @@ def get_node_data(g: Game) -> dict:
     is_ending = len(node.get("choices", [])) == 0
     route = infer_route(g.current_node, node)
     summary = score_summary(g, node.get("title", "")) if is_ending else None
+    fortune, fortune_bonus = daily_fortune()
 
     # 检查是否是关键转折点
     pivot = PIVOTAL_NODES.get(g.current_node)
@@ -565,10 +630,47 @@ def get_node_data(g: Game) -> dict:
         "player_name": g.player_name,
         "goal": get_goal(node["title"]),
         "route": route,
-        "mini_game": mini_game_for(g.current_node, node),
+        "mini_game": mini_game_for(g.current_node, node, g),
         "achievement_hints": ACHIEVEMENT_HINTS,
         "score_summary": summary,
+        "fortune": fortune,
+        "fortune_bonus": fortune_bonus,
+        "bonus_available": bonus_ending_available(SAVE_DIR, NODES),
+        "bonus_unlocked": BONUS_ENDING_TITLE in {
+            entry.get("title", "") for entry in read_gallery()
+        },
         "pivot": pivot,  # 新增：关键转折点信息
+    }
+
+
+def get_bonus_node_data(g: Game) -> dict:
+    fortune, fortune_bonus = daily_fortune()
+    return {
+        "ok": True,
+        "node_id": "bonus_ending",
+        "title": BONUS_ENDING_TITLE,
+        "text": BONUS_ENDING_TEXT,
+        "choices": [],
+        "is_ending": True,
+        "attrs": g.attrs,
+        "resources": g.resources,
+        "artifacts": g.artifacts,
+        "inventory": g.inventory,
+        "affinity": g.affinity,
+        "reputation": g.reputation,
+        "trait": g.trait,
+        "player_name": g.player_name,
+        "goal": "见证全部命运分支，完成隐藏结算。",
+        "route": "天命",
+        "mini_game": None,
+        "achievement_hints": ACHIEVEMENT_HINTS,
+        "score_summary": score_summary(g, BONUS_ENDING_TITLE),
+        "fortune": fortune,
+        "fortune_bonus": fortune_bonus,
+        "bonus_available": False,
+        "bonus_unlocked": True,
+        "bonus_ending": True,
+        "pivot": None,
     }
 
 

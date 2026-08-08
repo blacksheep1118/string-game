@@ -133,7 +133,7 @@
       "category": "属性",
       "trigger": {
         "type": "attrs_all_above",
-        "value": 30,
+        "value": 20,
         "node": "start"
       }
     },
@@ -238,7 +238,7 @@
       "category": "挑战",
       "trigger": {
         "type": "path_length",
-        "min": 60
+        "min": 25
       }
     },
     {
@@ -503,7 +503,7 @@
       "hidden": true,
       "trigger": {
         "type": "ending_id",
-        "ending": "end_saint"
+        "ending": "end_pill_saint"
       }
     }
   ]

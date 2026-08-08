@@ -210,6 +210,18 @@ body {
   height: 100%;
   background: var(--jade);
 }
+.mini-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.mini-action {
+  flex: 1 1 160px;
+  text-align: left;
+}
+.mini-action small { margin-top: 3px; }
+.mini-complete { margin-top: 10px; color: var(--jade); }
 .destiny-route {
   border: 1px solid var(--border);
   border-radius: 4px;

@@ -8,7 +8,7 @@ import os
 from typing import Any
 
 
-DEFAULT_RESOURCE_NAMES = ("灵石", "心魔", "历练", "丹药", "轮回")
+DEFAULT_RESOURCE_NAMES = ("灵石", "心魔", "历练", "丹药", "轮回", "正道", "魔道", "散修")
 
 
 def validate_nodes(
@@ -109,6 +109,28 @@ def duplicate_destinations(nodes: dict[str, dict[str, Any]]) -> list[dict[str, A
     return duplicates
 
 
+def semantic_duplicate_choices(nodes: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    """报告连目标、条件和效果都相同的伪选择。"""
+
+    duplicates = []
+    for node_id, node in nodes.items():
+        signatures: dict[str, list[int]] = {}
+        for index, choice in enumerate(node.get("choices", [])):
+            if not isinstance(choice, dict):
+                continue
+            signature = json.dumps({
+                "next": choice.get("next"),
+                "fail": choice.get("fail"),
+                "effect": choice.get("effect", {}),
+                "require": choice.get("require", {}),
+            }, ensure_ascii=False, sort_keys=True)
+            signatures.setdefault(signature, []).append(index)
+        for signature, indexes in signatures.items():
+            if len(indexes) > 1:
+                duplicates.append({"node": node_id, "choices": indexes, "signature": signature})
+    return duplicates
+
+
 def graph_quality(nodes: dict[str, dict[str, Any]], start: str = "start") -> dict[str, Any]:
     """Summarize reachability and common content-quality hazards."""
     reached = reachable_nodes(nodes, start)
@@ -119,6 +141,7 @@ def graph_quality(nodes: dict[str, dict[str, Any]], start: str = "start") -> dic
         "endings": sorted(ending_nodes(nodes)),
         "placeholders": placeholder_nodes(nodes),
         "duplicate_destinations": duplicate_destinations(nodes),
+        "semantic_duplicates": semantic_duplicate_choices(nodes),
     }
 
 
@@ -166,10 +189,15 @@ def main() -> int:
             "ending_count": len(quality["endings"]),
             "placeholders": quality["placeholders"],
             "duplicate_destinations": quality["duplicate_destinations"],
+            "semantic_duplicates": quality["semantic_duplicates"],
         }, ensure_ascii=False, indent=2))
     else:
         print(f"剧情节点校验通过，共 {len(NODES)} 个节点。")
-    if args.command == "quality" and (quality["unreachable"] or quality["placeholders"]):
+    if args.command == "quality" and (
+        quality["unreachable"]
+        or quality["placeholders"]
+        or quality["semantic_duplicates"]
+    ):
         return 1
     return 0
 

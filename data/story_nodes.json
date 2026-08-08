@@ -163,11 +163,18 @@
     "choices": [
       {
         "text": "拼死一搏，强行压制妖力",
-        "next": "ch5_absorb_1"
+        "next": "ch5_absorb_1",
+        "effect": {
+          "根骨": 2,
+          "心魔": 1
+        }
       },
       {
         "text": "放弃炼化，散去修为保命",
-        "next": "ch5_absorb_1"
+        "next": "ch5_absorb_1",
+        "effect": {
+          "精神": 2
+        }
       }
     ]
   },
@@ -177,11 +184,18 @@
     "choices": [
       {
         "text": "拔剑除魔，匡扶正义",
-        "next": "ch5_give_1"
+        "next": "ch5_give_1",
+        "effect": {
+          "根骨": 2,
+          "正道": 2
+        }
       },
       {
         "text": "明哲保身，绕道而行",
-        "next": "ch5_give_1"
+        "next": "ch5_give_1",
+        "effect": {
+          "精神": 2
+        }
       }
     ]
   },
@@ -221,11 +235,18 @@
     "choices": [
       {
         "text": "加入药王谷，广学丹术",
-        "next": "ch5_pill_heal_1"
+        "next": "ch5_pill_heal_1",
+        "effect": {
+          "悟性": 2
+        }
       },
       {
         "text": "留在民间，独立行医",
-        "next": "ch5_pill_heal_1"
+        "next": "ch5_pill_heal_1",
+        "effect": {
+          "魅力": 2,
+          "散修": 1
+        }
       }
     ]
   },
@@ -330,11 +351,18 @@
     "choices": [
       {
         "text": "用财富换取修炼丹药和功法",
-        "next": "ch3_sell_1"
+        "next": "ch3_sell_1",
+        "effect": {
+          "灵石": 3,
+          "魅力": 1
+        }
       },
       {
         "text": "婉拒，满足于凡间富贵",
-        "next": "ch3_sell_1"
+        "next": "ch3_sell_1",
+        "effect": {
+          "精神": 2
+        }
       }
     ]
   },
@@ -713,11 +741,19 @@
     "choices": [
       {
         "text": "乘胜追击，直取长老",
-        "next": "ch6_sect_leader_1"
+        "next": "ch6_sect_leader_1",
+        "effect": {
+          "根骨": 2,
+          "正道": 1
+        }
       },
       {
         "text": "给对手一个体面的退场",
-        "next": "ch6_sect_leader_1"
+        "next": "ch6_sect_leader_1",
+        "effect": {
+          "魅力": 2,
+          "正道": 1
+        }
       }
     ]
   },
@@ -773,11 +809,19 @@
     "choices": [
       {
         "text": "只守护不扩张，做一村守护神",
-        "next": "ch5_home_stay_1"
+        "next": "ch5_home_stay_1",
+        "effect": {
+          "正道": 2,
+          "精神": 1
+        }
       },
       {
         "text": "建立一个修仙家族，世代传承",
-        "next": "ch5_home_stay_1"
+        "next": "ch5_home_stay_1",
+        "effect": {
+          "魅力": 2,
+          "正道": 1
+        }
       }
     ]
   },
@@ -869,11 +913,18 @@
     "choices": [
       {
         "text": "不在意诅咒，靠自己修炼",
-        "next": "ch5_jade_burn_1"
+        "next": "ch5_jade_burn_1",
+        "effect": {
+          "精神": 2,
+          "心魔": 1
+        }
       },
       {
         "text": "寻找解除诅咒之法",
-        "next": "ch5_jade_burn_1"
+        "next": "ch5_jade_burn_1",
+        "effect": {
+          "悟性": 2
+        }
       }
     ]
   },
@@ -1055,11 +1106,17 @@
     "choices": [
       {
         "text": "背起老人，连夜赶回村子",
-        "next": "pro_help_3"
+        "next": "pro_help_3",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "就地生火，守到天亮再说",
-        "next": "pro_help_3"
+        "next": "pro_help_3",
+        "effect": {
+          "精神": 2
+        }
       }
     ]
   },
@@ -1103,11 +1160,17 @@
     "choices": [
       {
         "text": "握紧柴刀，悄悄靠近查看",
-        "next": "pro_ignore_3"
+        "next": "pro_ignore_3",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "躲到树后，屏息凝神",
-        "next": "pro_ignore_3"
+        "next": "pro_ignore_3",
+        "effect": {
+          "精神": 2
+        }
       }
     ]
   },
@@ -1117,11 +1180,17 @@
     "choices": [
       {
         "text": "看来躲不了了，准备应对",
-        "next": "ignore"
+        "next": "ignore",
+        "effect": {
+          "精神": 2
+        }
       },
       {
         "text": "悄悄往后退，试图不被发现",
-        "next": "ignore"
+        "next": "ignore",
+        "effect": {
+          "悟性": 1
+        }
       }
     ]
   },
@@ -1131,11 +1200,17 @@
     "choices": [
       {
         "text": "双手捧过玉简，恭敬小心",
-        "next": "ch2_accept_2"
+        "next": "ch2_accept_2",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "好奇地打量这枚发光的玉简",
-        "next": "ch2_accept_2"
+        "next": "ch2_accept_2",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -1165,11 +1240,17 @@
     "choices": [
       {
         "text": "继续修炼，稳固气感",
-        "next": "ch2_accept_4"
+        "next": "ch2_accept_4",
+        "effect": {
+          "精神": 2
+        }
       },
       {
         "text": "兴奋地向师父汇报感受",
-        "next": "ch2_accept_4"
+        "next": "ch2_accept_4",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -1179,11 +1260,25 @@
     "choices": [
       {
         "text": "剑修——一剑破万法，锋芒毕露",
-        "next": "accept"
+        "next": "sword",
+        "effect": {
+          "根骨": 2
+        }
       },
       {
         "text": "丹修——炼药济世，润物无声",
-        "next": "accept"
+        "next": "pill",
+        "effect": {
+          "悟性": 2
+        }
+      },
+      {
+        "text": "先听师父讲解百道，再慎重择一途",
+        "next": "accept",
+        "effect": {
+          "悟性": 1,
+          "精神": 1
+        }
       }
     ]
   },
@@ -1193,11 +1288,17 @@
     "choices": [
       {
         "text": "鞠躬道谢，离开老人",
-        "next": "ch2_refuse_2"
+        "next": "ch2_refuse_2",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "「您保重身体，我改日再来看您。」",
-        "next": "ch2_refuse_2"
+        "next": "ch2_refuse_2",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -1207,11 +1308,17 @@
     "choices": [
       {
         "text": "起身到院子里吹吹风",
-        "next": "ch2_refuse_3"
+        "next": "ch2_refuse_3",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "强迫自己入睡，不再多想",
-        "next": "ch2_refuse_3"
+        "next": "ch2_refuse_3",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -1221,11 +1328,17 @@
     "choices": [
       {
         "text": "梦醒后去后山走走",
-        "next": "ch2_refuse_4"
+        "next": "ch2_refuse_4",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "把梦画下来，仔细琢磨",
-        "next": "ch2_refuse_4"
+        "next": "ch2_refuse_4",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -1235,11 +1348,18 @@
     "choices": [
       {
         "text": "暗中研究这块古玉",
-        "next": "refuse"
+        "next": "refuse",
+        "effect": {
+          "悟性": 2
+        }
       },
       {
         "text": "拿古玉去镇上换钱",
-        "next": "refuse"
+        "next": "refuse",
+        "effect": {
+          "魅力": 2,
+          "灵石": 1
+        }
       }
     ]
   },
@@ -1269,11 +1389,17 @@
     "choices": [
       {
         "text": "乘胜追击，劈向头目",
-        "next": "ch2_bandits_3"
+        "next": "ch2_bandits_3",
+        "effect": {
+          "根骨": 2
+        }
       },
       {
         "text": "捡起钢刀，震慑其余山贼",
-        "next": "ch2_bandits_3"
+        "next": "ch2_bandits_3",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -1283,11 +1409,17 @@
     "choices": [
       {
         "text": "警惕地看着这个突然出现的道人",
-        "next": "ch2_bandits_4"
+        "next": "ch2_bandits_4",
+        "effect": {
+          "精神": 2
+        }
       },
       {
         "text": "「前辈……您过奖了。」拱手行礼",
-        "next": "ch2_bandits_4"
+        "next": "ch2_bandits_4",
+        "effect": {
+          "魅力": 2
+        }
       }
     ]
   },
@@ -1335,11 +1467,18 @@
     "choices": [
       {
         "text": "揉揉眼睛，确认是不是幻觉",
-        "next": "ch2_woods_3"
+        "next": "ch2_woods_3",
+        "effect": {
+          "精神": 1
+        }
       },
       {
         "text": "立刻爬起来探索洞窟",
-        "next": "ch2_woods_3"
+        "next": "ch2_woods_3",
+        "effect": {
+          "幸运": 1,
+          "悟性": 1
+        }
       }
     ]
   },
@@ -1349,11 +1488,18 @@
     "choices": [
       {
         "text": "先研究石壁上的文字",
-        "next": "ch2_woods_4"
+        "next": "ch2_woods_4",
+        "effect": {
+          "悟性": 2
+        }
       },
       {
         "text": "被那颗珠子深深吸引",
-        "next": "ch2_woods_4"
+        "next": "ch2_woods_4",
+        "effect": {
+          "幸运": 2,
+          "心魔": 1
+        }
       },
       {
         "text": "发现一只受伤的灵兽幼崽",
@@ -1405,11 +1551,17 @@
     "choices": [
       {
         "text": "迫不及待地想学",
-        "next": "ch3_sword_3"
+        "next": "ch3_sword_3",
+        "effect": {
+          "根骨": 2
+        }
       },
       {
         "text": "先向师父请教剑诀的理论",
-        "next": "ch3_sword_3"
+        "next": "ch3_sword_3",
+        "effect": {
+          "悟性": 2
+        }
       }
     ]
   },
@@ -1419,11 +1571,18 @@
     "choices": [
       {
         "text": "提剑下山查看情况",
-        "next": "ch3_sword_4"
+        "next": "ch3_sword_4",
+        "effect": {
+          "根骨": 1,
+          "正道": 1
+        }
       },
       {
         "text": "先去禀告师父再行动",
-        "next": "ch3_sword_4"
+        "next": "ch3_sword_4",
+        "effect": {
+          "精神": 2
+        }
       }
     ]
   },
@@ -1513,11 +1672,17 @@
     "choices": [
       {
         "text": "沿着山溪往上走，寻找地脉乳液",
-        "next": "ch4_pill_power_2"
+        "next": "ch4_pill_power_2",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "往悬崖峭壁去，那里常有灵芝",
-        "next": "ch4_pill_power_2"
+        "next": "ch4_pill_power_2",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -1527,11 +1692,17 @@
     "choices": [
       {
         "text": "用师父教的迷药粉撒向妖兽",
-        "next": "ch4_pill_power_3"
+        "next": "ch4_pill_power_3",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "绕到另一侧，趁它不注意采了就跑",
-        "next": "ch4_pill_power_3"
+        "next": "ch4_pill_power_3",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -1551,11 +1722,18 @@
     "choices": [
       {
         "text": "黎明即起，进山采药",
-        "next": "ch4_pill_heal_2"
+        "next": "ch4_pill_heal_2",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "向村里的药农收购最新鲜的草药",
-        "next": "ch4_pill_heal_2"
+        "next": "ch4_pill_heal_2",
+        "effect": {
+          "魅力": 2,
+          "灵石": 1
+        }
       }
     ]
   },
@@ -1565,11 +1743,17 @@
     "choices": [
       {
         "text": "严格按照古法炼制",
-        "next": "ch4_pill_heal_3"
+        "next": "ch4_pill_heal_3",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "试着根据师父的教导稍作改良",
-        "next": "ch4_pill_heal_3"
+        "next": "ch4_pill_heal_3",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -1615,11 +1799,18 @@
     "choices": [
       {
         "text": "凑近观察，想看个究竟",
-        "next": "ch3_jade_2"
+        "next": "ch3_jade_2",
+        "effect": {
+          "悟性": 2,
+          "心魔": 1
+        }
       },
       {
         "text": "丢进水盆里，想熄灭它",
-        "next": "ch3_jade_2"
+        "next": "ch3_jade_2",
+        "effect": {
+          "精神": 2
+        }
       }
     ]
   },
@@ -1629,11 +1820,17 @@
     "choices": [
       {
         "text": "「你……你是谁？」",
-        "next": "ch3_jade_3"
+        "next": "ch3_jade_3",
+        "effect": {
+          "魅力": 1
+        }
       },
       {
         "text": "转身就跑，这东西太邪门了",
-        "next": "ch3_jade_3"
+        "next": "ch3_jade_3",
+        "effect": {
+          "精神": 2
+        }
       }
     ]
   },
@@ -1698,11 +1895,17 @@
     "choices": [
       {
         "text": "一百两？至少得五百两！",
-        "next": "ch3_sell_2"
+        "next": "ch3_sell_2",
+        "effect": {
+          "魅力": 2
+        }
       },
       {
         "text": "先不卖，去打听一下行情",
-        "next": "ch3_sell_2"
+        "next": "ch3_sell_2",
+        "effect": {
+          "悟性": 2
+        }
       }
     ]
   },
@@ -1712,11 +1915,18 @@
     "choices": [
       {
         "text": "专心经商，享受富足生活",
-        "next": "ch3_sell_3"
+        "next": "ch3_sell_3",
+        "effect": {
+          "魅力": 2,
+          "灵石": 2
+        }
       },
       {
         "text": "空闲时打听修仙界的事",
-        "next": "ch3_sell_3"
+        "next": "ch3_sell_3",
+        "effect": {
+          "悟性": 2
+        }
       }
     ]
   },
@@ -1740,11 +1950,18 @@
     "choices": [
       {
         "text": "心中激动，暗暗立志出人头地",
-        "next": "ch3_sect_2"
+        "next": "ch3_sect_2",
+        "effect": {
+          "根骨": 1,
+          "魅力": 1
+        }
       },
       {
         "text": "告诫自己保持平常心",
-        "next": "ch3_sect_2"
+        "next": "ch3_sect_2",
+        "effect": {
+          "精神": 2
+        }
       }
     ]
   },
@@ -1754,11 +1971,17 @@
     "choices": [
       {
         "text": "倾尽全力，展现自己最好的状态",
-        "next": "ch3_sect_3"
+        "next": "ch3_sect_3",
+        "effect": {
+          "根骨": 2
+        }
       },
       {
         "text": "稳扎稳打，不求惊艳但求过关",
-        "next": "ch3_sect_3"
+        "next": "ch3_sect_3",
+        "effect": {
+          "精神": 2
+        }
       }
     ]
   },
@@ -1768,11 +1991,18 @@
     "choices": [
       {
         "text": "主动结交师兄师姐，打探消息",
-        "next": "ch3_sect_4"
+        "next": "ch3_sect_4",
+        "effect": {
+          "魅力": 2,
+          "正道": 1
+        }
       },
       {
         "text": "先专心修炼，不参与人事纷争",
-        "next": "ch3_sect_4"
+        "next": "ch3_sect_4",
+        "effect": {
+          "精神": 2
+        }
       }
     ]
   },
@@ -1796,11 +2026,18 @@
     "choices": [
       {
         "text": "悉心照顾，寸步不离",
-        "next": "ch3_home_2"
+        "next": "ch3_home_2",
+        "effect": {
+          "精神": 2
+        }
       },
       {
         "text": "同时暗中练习吐纳法术",
-        "next": "ch3_home_2"
+        "next": "ch3_home_2",
+        "effect": {
+          "悟性": 2,
+          "根骨": 1
+        }
       }
     ]
   },
@@ -1810,11 +2047,18 @@
     "choices": [
       {
         "text": "「娘，我不会让您失望的。」",
-        "next": "ch3_home_3"
+        "next": "ch3_home_3",
+        "effect": {
+          "根骨": 1,
+          "精神": 1
+        }
       },
       {
         "text": "「修仙也好，平凡也罢，无愧于心就好。」",
-        "next": "ch3_home_3"
+        "next": "ch3_home_3",
+        "effect": {
+          "精神": 2
+        }
       }
     ]
   },
@@ -1824,11 +2068,17 @@
     "choices": [
       {
         "text": "前往玄天宗，兑现迟到的机缘",
-        "next": "go_home"
+        "next": "go_home",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "留在村子，用功法守护这片土地",
-        "next": "go_home"
+        "next": "go_home",
+        "effect": {
+          "精神": 2
+        }
       }
     ]
   },
@@ -1838,11 +2088,17 @@
     "choices": [
       {
         "text": "先研究石壁上古文的内容",
-        "next": "ch3_explore_2"
+        "next": "ch3_explore_2",
+        "effect": {
+          "悟性": 2
+        }
       },
       {
         "text": "寻找有没有出口或其他的路",
-        "next": "ch3_explore_2"
+        "next": "ch3_explore_2",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -1852,11 +2108,17 @@
     "choices": [
       {
         "text": "更加小心地探索",
-        "next": "ch3_explore_3"
+        "next": "ch3_explore_3",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "做好随时撤退的准备",
-        "next": "ch3_explore_3"
+        "next": "ch3_explore_3",
+        "effect": {
+          "精神": 2
+        }
       }
     ]
   },
@@ -1866,11 +2128,18 @@
     "choices": [
       {
         "text": "触碰那颗珠子",
-        "next": "ch4_woods_decide"
+        "next": "ch4_woods_decide",
+        "effect": {
+          "幸运": 1,
+          "心魔": 1
+        }
       },
       {
         "text": "先不碰珠子，继续研读石壁",
-        "next": "ch4_woods_decide"
+        "next": "ch4_woods_decide",
+        "effect": {
+          "悟性": 2
+        }
       }
     ]
   },
@@ -1900,11 +2169,17 @@
     "choices": [
       {
         "text": "三天后忍不住去了",
-        "next": "ch3_leave_2"
+        "next": "ch3_leave_2",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "把这事藏在心里，继续平凡生活",
-        "next": "ch3_leave_2"
+        "next": "ch3_leave_2",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -1948,11 +2223,17 @@
     "choices": [
       {
         "text": "寻找它的弱点——眼睛和腹部",
-        "next": "ch4_fight_3"
+        "next": "ch4_fight_3",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "先用身法消耗它的体力",
-        "next": "ch4_fight_3"
+        "next": "ch4_fight_3",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -1962,11 +2243,17 @@
     "choices": [
       {
         "text": "看准时机，一剑穿心",
-        "next": "ch5_after_fight"
+        "next": "ch5_after_fight",
+        "effect": {
+          "根骨": 2
+        }
       },
       {
         "text": "继续消耗，等它露出更大破绽",
-        "next": "ch5_after_fight"
+        "next": "ch5_after_fight",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -1976,11 +2263,17 @@
     "choices": [
       {
         "text": "在桥下设下绊索和尖刺",
-        "next": "ch4_tactic_2"
+        "next": "ch4_tactic_2",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "用剑诀在桥面刻下引爆符",
-        "next": "ch4_tactic_2"
+        "next": "ch4_tactic_2",
+        "effect": {
+          "根骨": 2
+        }
       }
     ]
   },
@@ -1990,11 +2283,17 @@
     "choices": [
       {
         "text": "回头确认妖兽位置",
-        "next": "ch4_tactic_3"
+        "next": "ch4_tactic_3",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "全力冲刺，不敢回头",
-        "next": "ch4_tactic_3"
+        "next": "ch4_tactic_3",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -2038,11 +2337,18 @@
     "choices": [
       {
         "text": "「力量就是正义，弱者活该被淘汰。」",
-        "next": "ch5_kill_2"
+        "next": "ch5_kill_2",
+        "effect": {
+          "正道": 1,
+          "魅力": 1
+        }
       },
       {
         "text": "「我只杀该杀之人，问心无愧。」",
-        "next": "ch5_kill_2"
+        "next": "ch5_kill_2",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -2052,11 +2358,17 @@
     "choices": [
       {
         "text": "继续修炼，不愿停下",
-        "next": "ch5_kill_3"
+        "next": "ch5_kill_3",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "找师父请教心魔的问题",
-        "next": "ch5_kill_3"
+        "next": "ch5_kill_3",
+        "effect": {
+          "悟性": 2
+        }
       }
     ]
   },
@@ -2076,11 +2388,17 @@
     "choices": [
       {
         "text": "继续加大训练强度",
-        "next": "ch5_body_2"
+        "next": "ch5_body_2",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "寻找炼体的天材地宝辅助",
-        "next": "ch5_body_2"
+        "next": "ch5_body_2",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -2090,11 +2408,17 @@
     "choices": [
       {
         "text": "前往前线支援正道联盟",
-        "next": "ch5_body_3"
+        "next": "ch5_body_3",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "继续独自修行，不卷入纷争",
-        "next": "ch5_body_3"
+        "next": "ch5_body_3",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -2114,11 +2438,17 @@
     "choices": [
       {
         "text": "以自身灵力包裹妖丹，缓缓引导",
-        "next": "ch5_absorb_2"
+        "next": "ch5_absorb_2",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "布置一个聚灵阵，借助天地之力",
-        "next": "ch5_absorb_2"
+        "next": "ch5_absorb_2",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -2128,11 +2458,18 @@
     "choices": [
       {
         "text": "拼死压制，强行引导妖力归入丹田",
-        "next": "ch6_absorb_trial"
+        "next": "ch6_absorb_trial",
+        "effect": {
+          "根骨": 2,
+          "心魔": 1
+        }
       },
       {
         "text": "放弃！趁现在还来得及——",
-        "next": "ch6_absorb_trial"
+        "next": "ch6_absorb_trial",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -2142,11 +2479,17 @@
     "choices": [
       {
         "text": "在门外等候师父出来",
-        "next": "ch5_give_2"
+        "next": "ch5_give_2",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "帮师父准备炼器材料",
-        "next": "ch5_give_2"
+        "next": "ch5_give_2",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -2156,11 +2499,17 @@
     "choices": [
       {
         "text": "郑重接过，向师父磕了三个头",
-        "next": "ch5_give_3"
+        "next": "ch5_give_3",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "试剑——剑光过处，青石柱子一分为二",
-        "next": "ch5_give_3"
+        "next": "ch5_give_3",
+        "effect": {
+          "根骨": 2
+        }
       }
     ]
   },
@@ -2170,11 +2519,17 @@
     "choices": [
       {
         "text": "拔剑！不能眼睁睁看着",
-        "next": "ch6_frost_blade"
+        "next": "ch6_frost_blade",
+        "effect": {
+          "根骨": 2
+        }
       },
       {
         "text": "先观察局势，谋定后动",
-        "next": "ch6_frost_blade"
+        "next": "ch6_frost_blade",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -2184,11 +2539,17 @@
     "choices": [
       {
         "text": "免费为穷人治病，只为积累功德",
-        "next": "ch5_pill_heal_2"
+        "next": "ch5_pill_heal_2",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "收取合理费用，维持炼丹开销",
-        "next": "ch5_pill_heal_2"
+        "next": "ch5_pill_heal_2",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -2240,11 +2601,17 @@
     "choices": [
       {
         "text": "拔出剑，坚定地站到掌门身后",
-        "next": "ch5_sect_leader_2"
+        "next": "ch5_sect_leader_2",
+        "effect": {
+          "根骨": 2
+        }
       },
       {
         "text": "「我站在宗门大局这边。」",
-        "next": "ch5_sect_leader_2"
+        "next": "ch5_sect_leader_2",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -2254,11 +2621,17 @@
     "choices": [
       {
         "text": "正面冲向叛变长老",
-        "next": "end_leader"
+        "next": "end_leader",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "从侧面绕行，伺机偷袭",
-        "next": "end_leader"
+        "next": "end_leader",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -2268,11 +2641,17 @@
     "choices": [
       {
         "text": "忍一时风平浪静，继续修炼",
-        "next": "ch5_sect_neutral_2"
+        "next": "ch5_sect_neutral_2",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "「我走还不行吗？」主动离开宗门",
-        "next": "ch5_sect_neutral_2"
+        "next": "ch5_sect_neutral_2",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -2296,11 +2675,17 @@
     "choices": [
       {
         "text": "日夜兼程，尽快赶到",
-        "next": "ch5_home_late_2"
+        "next": "ch5_home_late_2",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "一路游历，沿途增长见识",
-        "next": "ch5_home_late_2"
+        "next": "ch5_home_late_2",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -2310,11 +2695,17 @@
     "choices": [
       {
         "text": "把三年来的修炼成果展示给白眉看",
-        "next": "ch6_home_late"
+        "next": "ch6_home_late",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "先向白眉道谢当年的相助之恩",
-        "next": "ch6_home_late"
+        "next": "ch6_home_late",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -2324,11 +2715,17 @@
     "choices": [
       {
         "text": "娶妻生子，建立家庭",
-        "next": "ch5_home_stay_2"
+        "next": "ch5_home_stay_2",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "独身一人，将全部精力投入修炼",
-        "next": "ch5_home_stay_2"
+        "next": "ch5_home_stay_2",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -2338,11 +2735,17 @@
     "choices": [
       {
         "text": "教他们基础功法，不强求",
-        "next": "ch6_home_stay"
+        "next": "ch6_home_stay",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "严格训练，建立青叶世家",
-        "next": "ch6_home_stay"
+        "next": "ch6_home_stay",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -2352,11 +2755,18 @@
     "choices": [
       {
         "text": "继续修炼魔功，不再回头",
-        "next": "ch5_jade_trust_2"
+        "next": "ch5_jade_trust_2",
+        "effect": {
+          "幸运": 1,
+          "心魔": 1
+        }
       },
       {
         "text": "想反悔——但已经太迟了",
-        "next": "ch5_jade_trust_2"
+        "next": "ch5_jade_trust_2",
+        "effect": {
+          "精神": 1
+        }
       },
       {
         "text": "深入修炼魔功，追求力量",
@@ -2373,11 +2783,18 @@
     "choices": [
       {
         "text": "放弃抵抗，被天魔夺舍",
-        "next": "ch6_jade_trust_final"
+        "next": "ch6_jade_trust_final",
+        "effect": {
+          "幸运": 1,
+          "心魔": 1
+        }
       },
       {
         "text": "拼尽最后的意志力与天魔对抗",
-        "next": "ch6_jade_trust_final"
+        "next": "ch6_jade_trust_final",
+        "effect": {
+          "悟性": 1
+        }
       }
     ]
   },
@@ -2387,11 +2804,18 @@
     "choices": [
       {
         "text": "「我的命运我自己掌控。」",
-        "next": "ch5_jade_burn_2"
+        "next": "ch5_jade_burn_2",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "默默看着古玉在火中碎裂",
-        "next": "ch5_jade_burn_2"
+        "next": "ch5_jade_burn_2",
+        "effect": {
+          "幸运": 1,
+          "心魔": 1
+        }
       }
     ]
   },
@@ -2401,11 +2825,18 @@
     "choices": [
       {
         "text": "从零开始，靠自己修炼",
-        "next": "ch6_jade_burn_fate"
+        "next": "ch6_jade_burn_fate",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "四处寻访，找出清除诅咒的办法",
-        "next": "ch6_jade_burn_fate"
+        "next": "ch6_jade_burn_fate",
+        "effect": {
+          "幸运": 1,
+          "心魔": 1
+        }
       }
     ]
   },
@@ -2415,11 +2846,18 @@
     "choices": [
       {
         "text": "将商业与修仙结合，建立灵石商行",
-        "next": "ch5_merchant_2"
+        "next": "ch5_merchant_2",
+        "effect": {
+          "魅力": 2,
+          "灵石": 1
+        }
       },
       {
         "text": "把生意交给可靠的人，自己专心修炼",
-        "next": "ch5_merchant_2"
+        "next": "ch5_merchant_2",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -2429,11 +2867,17 @@
     "choices": [
       {
         "text": "分化瓦解，各个击破",
-        "next": "ch6_merchant_rise"
+        "next": "ch6_merchant_rise",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "寻求合作共赢的方案",
-        "next": "ch6_merchant_rise"
+        "next": "ch6_merchant_rise",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -2443,11 +2887,18 @@
     "choices": [
       {
         "text": "「我杀的都是该杀之人，问心无愧！」",
-        "next": "ch6_kill_final"
+        "next": "ch6_kill_final",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "沉默不语，任由雷劫洗礼",
-        "next": "ch6_kill_final"
+        "next": "ch6_kill_final",
+        "effect": {
+          "正道": 1,
+          "魅力": 1
+        }
       }
     ]
   },
@@ -2471,11 +2922,17 @@
     "choices": [
       {
         "text": "主动断后，掩护战友撤退",
-        "next": "ch6_body_choice"
+        "next": "ch6_body_choice",
+        "effect": {
+          "精神": 2
+        }
       },
       {
         "text": "冲锋在前，斩杀敌将鼓舞士气",
-        "next": "ch6_body_choice"
+        "next": "ch6_body_choice",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -2499,11 +2956,18 @@
     "choices": [
       {
         "text": "将两股力量强行融合，形成全新的力量",
-        "next": "ch6_absorb_result"
+        "next": "ch6_absorb_result",
+        "effect": {
+          "根骨": 2,
+          "心魔": 1
+        }
       },
       {
         "text": "以一方为主导，另一方为辅助",
-        "next": "ch6_absorb_result"
+        "next": "ch6_absorb_result",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -2527,11 +2991,19 @@
     "choices": [
       {
         "text": "夜袭魔修据点，先解决头领",
-        "next": "ch6_frost_choice"
+        "next": "ch6_frost_choice",
+        "effect": {
+          "幸运": 1,
+          "心魔": 1
+        }
       },
       {
         "text": "潜入城中救出被困百姓",
-        "next": "ch6_frost_choice"
+        "next": "ch6_frost_choice",
+        "effect": {
+          "正道": 1,
+          "魅力": 1
+        }
       }
     ]
   },
@@ -2555,11 +3027,17 @@
     "choices": [
       {
         "text": "「三年不晚，该出关了。」",
-        "next": "ch6_pill_mastery"
+        "next": "ch6_pill_mastery",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "「再等等，我还能更精进。」",
-        "next": "ch6_pill_mastery"
+        "next": "ch6_pill_mastery",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -2569,11 +3047,17 @@
     "choices": [
       {
         "text": "继续丹道研究，追求极致",
-        "next": "ch7_pill_endgame"
+        "next": "ch7_pill_endgame",
+        "effect": {
+          "悟性": 2
+        }
       },
       {
         "text": "将丹道融入武道，开创全新体系",
-        "next": "ch7_pill_endgame"
+        "next": "ch7_pill_endgame",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -2583,11 +3067,17 @@
     "choices": [
       {
         "text": "「够了……我撑不住了……」",
-        "next": "ch6_pill_rush_end"
+        "next": "ch6_pill_rush_end",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "「再来！我就不信压不住！」",
-        "next": "ch6_pill_rush_end"
+        "next": "ch6_pill_rush_end",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -2611,11 +3101,17 @@
     "choices": [
       {
         "text": "轻松完成试炼，震惊谷中长老",
-        "next": "ch6_valley_rise"
+        "next": "ch6_valley_rise",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "低调行事，故意只做对大部分",
-        "next": "ch6_valley_rise"
+        "next": "ch6_valley_rise",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -2639,11 +3135,18 @@
     "choices": [
       {
         "text": "冒险用自己的灵力逼出毒素",
-        "next": "ch6_folk_end"
+        "next": "ch6_folk_end",
+        "effect": {
+          "幸运": 1,
+          "心魔": 1
+        }
       },
       {
         "text": "先稳住病情，派人去药王谷求药",
-        "next": "ch6_folk_end"
+        "next": "ch6_folk_end",
+        "effect": {
+          "精神": 2
+        }
       }
     ]
   },
@@ -2675,11 +3178,18 @@
       },
       {
         "text": "燃烧精血，强行提升战力",
-        "next": "ch6_sect_leader_2"
+        "next": "ch6_sect_leader_2",
+        "effect": {
+          "根骨": 2,
+          "心魔": 1
+        }
       },
       {
         "text": "利用场地优势游斗",
-        "next": "ch6_sect_leader_2"
+        "next": "ch6_sect_leader_2",
+        "effect": {
+          "幸运": 1
+        }
       }
     ]
   },
@@ -2689,11 +3199,17 @@
     "choices": [
       {
         "text": "一剑斩杀，以儆效尤",
-        "next": "ch7_sect_promotion"
+        "next": "ch7_sect_promotion",
+        "effect": {
+          "根骨": 2
+        }
       },
       {
         "text": "废其修为，交给掌门发落",
-        "next": "ch7_sect_promotion"
+        "next": "ch7_sect_promotion",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -2720,11 +3236,17 @@
     "choices": [
       {
         "text": "安于孤峰，继续静修",
-        "next": "ch7_neutral_return"
+        "next": "ch7_neutral_return",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "以金丹修为重返玄天宗",
-        "next": "ch7_neutral_return"
+        "next": "ch7_neutral_return",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -2734,11 +3256,17 @@
     "choices": [
       {
         "text": "每天比别人多修炼两个时辰",
-        "next": "ch6_home_late_choice"
+        "next": "ch6_home_late_choice",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "钻研适合大龄修士的特殊功法",
-        "next": "ch6_home_late_choice"
+        "next": "ch6_home_late_choice",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -2767,11 +3295,17 @@
     "choices": [
       {
         "text": "建立家族规矩，世代守护村子",
-        "next": "ch6_stay_end"
+        "next": "ch6_stay_end",
+        "effect": {
+          "精神": 2
+        }
       },
       {
         "text": "鼓励孩子们外出闯荡",
-        "next": "ch6_stay_end"
+        "next": "ch6_stay_end",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -2781,11 +3315,17 @@
     "choices": [
       {
         "text": "「这样就够了。」含笑而坐",
-        "next": "ch7_home_stay_grow"
+        "next": "ch7_home_stay_grow",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "「这只是一个开始。」着手培养下一代",
-        "next": "ch7_home_stay_grow"
+        "next": "ch7_home_stay_grow",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -2795,11 +3335,17 @@
     "choices": [
       {
         "text": "全力接纳，不浪费一丝一毫",
-        "next": "ch6_touch_result"
+        "next": "ch6_touch_result",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "筛选对自己有用的部分再吸收",
-        "next": "ch6_touch_result"
+        "next": "ch6_touch_result",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -2823,11 +3369,17 @@
     "choices": [
       {
         "text": "把破译的内容整理成册",
-        "next": "ch6_study_end"
+        "next": "ch6_study_end",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "尝试修习石壁上记载的太虚功法",
-        "next": "ch6_study_end"
+        "next": "ch6_study_end",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -2851,11 +3403,17 @@
     "choices": [
       {
         "text": "努力维持这个平衡",
-        "next": "ch7_jade_end"
+        "next": "ch7_jade_end",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "寻找完全融合或分离的方法",
-        "next": "ch7_jade_end"
+        "next": "ch7_jade_end",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -2879,11 +3437,17 @@
     "choices": [
       {
         "text": "接受他们的投降，组建联盟",
-        "next": "ch7_merchant_expand"
+        "next": "ch7_merchant_expand",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "「不接受投降，我要吞并你们。」",
-        "next": "ch7_merchant_expand"
+        "next": "ch7_merchant_expand",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -2893,11 +3457,17 @@
     "choices": [
       {
         "text": "「名利都是身外物。」含笑不语",
-        "next": "ch7_rich_philanthropy"
+        "next": "ch7_rich_philanthropy",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "冥冥之中你感到，这些善举似乎在改变什么……",
-        "next": "ch7_rich_philanthropy"
+        "next": "ch7_rich_philanthropy",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -2907,11 +3477,17 @@
     "choices": [
       {
         "text": "踏上飞升之路，迈向仙界",
-        "next": "ch8_sword_final"
+        "next": "ch8_sword_final",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "回头看看这个世界最后一眼",
-        "next": "ch8_sword_final"
+        "next": "ch8_sword_final",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -2945,11 +3521,18 @@
     "choices": [
       {
         "text": "放弃抵抗，接受魔道",
-        "next": "ch8_dark_final"
+        "next": "ch8_dark_final",
+        "effect": {
+          "幸运": 1,
+          "心魔": 1
+        }
       },
       {
         "text": "用最后一丝清醒写下遗书",
-        "next": "ch8_dark_final"
+        "next": "ch8_dark_final",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -2983,11 +3566,18 @@
     "choices": [
       {
         "text": "以剑体双修的极限，正面迎战魔主",
-        "next": "ch8_body_war_end"
+        "next": "ch8_body_war_end",
+        "effect": {
+          "根骨": 2
+        }
       },
       {
         "text": "寻找魔主的弱点——他的左眼有旧伤",
-        "next": "ch8_body_war_end"
+        "next": "ch8_body_war_end",
+        "effect": {
+          "幸运": 1,
+          "心魔": 1
+        }
       }
     ]
   },
@@ -3011,11 +3601,17 @@
     "choices": [
       {
         "text": "继续云游，不问世事",
-        "next": "ch8_free_end"
+        "next": "ch8_free_end",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "选一处幽谷，收徒传道",
-        "next": "ch8_free_end"
+        "next": "ch8_free_end",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -3039,11 +3635,17 @@
     "choices": [
       {
         "text": "继续钻研，寻找丹道极致",
-        "next": "ch8_pill_final"
+        "next": "ch8_pill_final",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "把毕生所学传下去，开启新篇章",
-        "next": "ch8_pill_final"
+        "next": "ch8_pill_final",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -3077,11 +3679,17 @@
     "choices": [
       {
         "text": "接受融合——你中有我，我中有你",
-        "next": "ch8_jade_end"
+        "next": "ch8_jade_end",
+        "effect": {
+          "幸运": 1
+        }
       },
       {
         "text": "「我必须占据主导。」施加封印",
-        "next": "ch8_jade_end"
+        "next": "ch8_jade_end",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },
@@ -3101,11 +3709,18 @@
     "choices": [
       {
         "text": "「天魔已死，叶尘也已死。我是……魔尘。」",
-        "next": "ch9_jade_final_extra"
+        "next": "ch9_jade_final_extra",
+        "effect": {
+          "幸运": 1,
+          "心魔": 1
+        }
       },
       {
         "text": "「我依然是叶尘。只是多了一个房客。」",
-        "next": "ch9_jade_final_extra"
+        "next": "ch9_jade_final_extra",
+        "effect": {
+          "精神": 1
+        }
       }
     ]
   },

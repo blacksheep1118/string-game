@@ -24,6 +24,7 @@ const API = '';
 let currentNode = null;
 let isEnding = false;
 let activeChoices = [];
+let choiceInFlight = false;
 const PREF_KEY = 'xiantu_preferences';
 let preferences = loadPreferences();
 
@@ -86,7 +87,9 @@ async function api(path, data = {}) {
 }
 
 async function apiGet(path) {
-  const r = await fetch(API + path);
+  const url = new URL(API + path, window.location.href);
+  url.searchParams.set('session_id', SID);
+  const r = await fetch(url);
   const payload = await r.json();
   if (!r.ok || payload.error) {
     throw new Error(payload.error || '请求失败');
@@ -153,11 +156,23 @@ function renderAttrs(attrs, data = {}) {
   const artifactHTML = (data.artifacts || []).map(name => `
     <span class="stat-chip">法宝 <strong>${escapeHTML(name)}</strong></span>
   `).join('');
+  const inventory = data.inventory || [];
+  const inventoryHTML = inventory.length
+    ? inventory.map(name => `
+      <span class="stat-chip">行囊 <strong>${escapeHTML(name)}</strong></span>
+    `).join('')
+    : '';
+  const affinity = data.affinity || {};
+  const affinityHTML = Object.entries(affinity)
+    .filter(([, value]) => Number(value) !== 0)
+    .map(([name, value]) => `
+      <span class="stat-chip">羁绊·${escapeHTML(name)} <strong>${escapeHTML(value)}</strong></span>
+    `).join('');
   const rep = data.reputation || {};
   const reputationHTML = Object.entries(rep).filter(([, v]) => Number(v) !== 0).map(([k, v]) => `
     <span class="stat-chip">${escapeHTML(k)}声望 <strong>${escapeHTML(v)}</strong></span>
   `).join('');
-  panel.innerHTML = attrHTML + `<div class="stat-section">${resourceHTML}${artifactHTML}${reputationHTML}</div>`;
+  panel.innerHTML = attrHTML + `<div class="stat-section">${resourceHTML}${artifactHTML}${inventoryHTML}${affinityHTML}${reputationHTML}</div>`;
 }
 
 // 渲染操作按钮
@@ -193,7 +208,36 @@ function renderMiniPanel(panel) {
     </div>
   `).join('');
   const prompt = panel.prompt ? `<small>${escapeHTML(panel.prompt)}</small>` : '';
-  return `<div class="mini-panel"><strong>${escapeHTML(panel.title || '态势')}</strong>${bars}${prompt}</div>`;
+  const actions = (panel.actions || []).map(action => `
+    <button class="action-btn mini-action" onclick='playMiniGame(${JSON.stringify(action.id)})'
+      ${panel.completed ? 'disabled' : ''}>
+      ${escapeHTML(action.label)}
+      <small>${escapeHTML(action.hint || '')}</small>
+    </button>
+  `).join('');
+  const status = panel.completed
+    ? '<div class="mini-complete">本轮试炼已完成</div>'
+    : actions ? `<div class="mini-actions">${actions}</div>` : '';
+  return `<div class="mini-panel"><strong>${escapeHTML(panel.title || '态势')}</strong>${bars}${prompt}${status}</div>`;
+}
+
+async function playMiniGame(action) {
+  if (choiceInFlight) return;
+  choiceInFlight = true;
+  document.querySelectorAll('.mini-action').forEach(button => {
+    button.disabled = true;
+  });
+  try {
+    const data = await api('/api/mini_game', { action });
+    renderNode(data);
+    (data.achievements || []).forEach((ach, i) => {
+      setTimeout(() => showAchievementPopup(ach), i * 500);
+    });
+  } catch (err) {
+    toast(err.message || '试炼失败');
+  } finally {
+    choiceInFlight = false;
+  }
 }
 
 function renderChoiceHints(hints = []) {
@@ -204,6 +248,7 @@ function renderChoiceHints(hints = []) {
 // 自动存档 — 章节切换时覆盖同一文件
 let lastChapter = '';
 let autoSaveFile = '';  // 本次游玩的自动存档文件名
+let autoSavePromise = Promise.resolve();
 
 function getChapter(title) {
   const m = title.match(/^(第[〇一二三四五六七八九十终]+章)/);
@@ -213,20 +258,23 @@ function getChapter(title) {
 function resetAutoSave() {
   autoSaveFile = '';
   lastChapter = '';
+  autoSavePromise = Promise.resolve();
 }
 
-async function autoSaveOnChapter(data) {
+function autoSaveOnChapter(data) {
   const chapter = getChapter(data.title);
   if (chapter && chapter !== lastChapter && lastChapter !== '') {
     // 首次自动存档创建新文件，后续覆盖同一文件
     const payload = autoSaveFile ? { overwrite: autoSaveFile } : {};
-    try {
-      const r = await api('/api/save', payload);
-      if (!autoSaveFile && r.filename) autoSaveFile = r.filename;
-      toast('已自动存档 (' + chapter + ')');
-    } catch (err) {
-      toast(err.message || '自动存档失败');
-    }
+    autoSavePromise = autoSavePromise.then(async () => {
+      try {
+        const r = await api('/api/save', payload);
+        if (!autoSaveFile && r.filename) autoSaveFile = r.filename;
+        toast('已自动存档 (' + chapter + ')');
+      } catch (err) {
+        toast(err.message || '自动存档失败');
+      }
+    });
   }
   if (chapter) lastChapter = chapter;
 }
@@ -259,6 +307,10 @@ function renderNode(data) {
   if (data.goal) {
     html += `<div class="goal-banner"><strong>当前目标</strong>：${escapeHTML(data.goal)}</div>`;
   }
+  if (data.node_id === 'start' && data.trait && data.fortune) {
+    const bonus = Number(data.fortune_bonus || 0);
+    html += `<div class="goal-banner">今日运势：<strong>${escapeHTML(data.fortune)}</strong> · 幸运 ${bonus >= 0 ? '+' : ''}${escapeHTML(bonus)}</div>`;
+  }
   html += renderFeedback(data.feedback || []);
   html += renderMiniPanel(data.mini_game);
   html += `<div class="story-text">${renderText(data.text)}</div>`;
@@ -288,6 +340,11 @@ function renderNode(data) {
 
 // 做选择
 async function makeChoice(idx) {
+  if (choiceInFlight) return;
+  choiceInFlight = true;
+  document.querySelectorAll('.choice-btn').forEach(button => {
+    button.disabled = true;
+  });
   try {
     const data = await api('/api/choice', { choice: idx });
     renderNode(data);
@@ -300,6 +357,8 @@ async function makeChoice(idx) {
     }
   } catch (err) {
     toast(err.message || '操作失败');
+  } finally {
+    choiceInFlight = false;
   }
 }
 
@@ -337,7 +396,12 @@ function showAchievementPopup(ach) {
 async function saveGame() {
   try {
     const d = await api('/api/save');
-    if (d.ok) toast('✓ 存档已保存');
+    if (d.ok) {
+      toast('✓ 存档已保存');
+      (d.achievements || []).forEach((ach, i) => {
+        setTimeout(() => showAchievementPopup(ach), i * 500);
+      });
+    }
   } catch (err) {
     toast(err.message || '保存失败');
   }
@@ -451,6 +515,9 @@ async function quickRestart() {
   try {
     const data = await api('/api/quick_restart');
     renderNode(data);
+    (data.achievements || []).forEach((ach, i) => {
+      setTimeout(() => showAchievementPopup(ach), i * 500);
+    });
     toast('已进入新一轮轮回');
   } catch (err) {
     toast(err.message || '快速轮回失败');
@@ -460,6 +527,9 @@ async function quickRestart() {
 async function showDestinyMap() {
   try {
     const data = await api('/api/destiny_map');
+    (data.achievements || []).forEach((ach, i) => {
+      setTimeout(() => showAchievementPopup(ach), i * 500);
+    });
     const map = data.map || {};
     let html = `<div class="modal-overlay" onclick="this.remove()"><div class="modal" onclick="event.stopPropagation()">
       <h2>命运图谱</h2>`;
@@ -688,6 +758,9 @@ function showTraitSelection(attrs) {
     try {
       const data = await api('/api/set_attrs', { attrs, trait: selectedTrait });
       renderNode(data);
+      (data.achievements || []).forEach((ach, i) => {
+        setTimeout(() => showAchievementPopup(ach), i * 500);
+      });
     } catch (err) {
       toast(err.message || '角色创建失败');
     }
@@ -742,8 +815,20 @@ function toggleAudio() {
   audioOn = !audioOn;
   preferences.audioOn = audioOn;
   savePreferences();
+  markSettingsChanged();
   updateAudioButton();
   if (audioOn) playNote(440, 0.1, 'sine', 0.03);
+}
+
+async function markSettingsChanged() {
+  try {
+    const data = await api('/api/progression_event', { event: 'changed_settings' });
+    (data.achievements || []).forEach((ach, i) => {
+      setTimeout(() => showAchievementPopup(ach), i * 500);
+    });
+  } catch {
+    // 设置也可脱机保存在 localStorage，服务器不可用时不打断界面操作。
+  }
 }
 
 function updateAudioButton() {
@@ -789,11 +874,13 @@ function showSettingsModal() {
     preferences.theme = theme.value;
     savePreferences();
     applyPreferences();
+    markSettingsChanged();
   });
   fontSize.addEventListener('change', () => {
     preferences.fontSize = fontSize.value;
     savePreferences();
     applyPreferences();
+    markSettingsChanged();
   });
   overlay.querySelector('#setting-audio').addEventListener('click', event => {
     toggleAudio();
@@ -833,7 +920,7 @@ async function showGallery() {
     toast(err.message || '读取画廊失败');
     return;
   }
-  const total = Number(storyStats.endings || 0);
+  const total = Number(storyStats.total_endings || storyStats.endings || 0);
   const content = document.getElementById('content');
 
   function getRankClass(title) {
@@ -863,9 +950,10 @@ async function showGallery() {
   } else {
     html += '<div class="gallery-grid">';
     endings.forEach(e => {
+      const cleanTitle = (e.title || '').replace(/^【(?:结局(?:·[^】]+)?|隐藏结局)】\s*/, '');
       html += `<div class="gallery-card">
         <div class="rank-badge ${getRankClass(e.title)}">${escapeHTML(getRankLabel(e.title))}</div>
-        <p style="margin:8px 0;font-size:0.9rem">${escapeHTML((e.title || '').replace('【结局】',''))}</p>
+        <p style="margin:8px 0;font-size:0.9rem">${escapeHTML(cleanTitle)}</p>
         <p style="font-size:0.75rem;color:var(--text-dim)">${escapeHTML(e.saved_at || e.achieved_at || '')}</p>
         <p style="font-size:0.75rem;color:var(--text-dim)">${escapeHTML(e.player_name || '')} · ${escapeHTML(e.trait || '')}</p>
       </div>`;
@@ -946,6 +1034,11 @@ async function showEndingSummary(data) {
     </div>`;
   }
 
+  if (record.bonus_available) {
+    summaryHTML += `<button class="choice-btn" style="max-width:260px;margin:14px auto 0;display:block" onclick="unlockBonusEnding()">
+      <span class="idx">★</span>解锁隐藏结局</button>`;
+  }
+
   // 决策轮数
   summaryHTML += `<p style="text-align:center;color:var(--text-dim);margin-top:12px">
     词条: ${escapeHTML(data.trait || '无')} · 结局: ${escapeHTML((node.title || '').replace('【结局】',''))}
@@ -953,6 +1046,22 @@ async function showEndingSummary(data) {
   summaryHTML += '</div>';
 
   return summaryHTML;
+}
+
+async function unlockBonusEnding() {
+  if (choiceInFlight) return;
+  choiceInFlight = true;
+  try {
+    const data = await api('/api/bonus_ending');
+    renderNode(data);
+    (data.achievements || []).forEach((ach, i) => {
+      setTimeout(() => showAchievementPopup(ach), i * 500);
+    });
+  } catch (err) {
+    toast(err.message || '隐藏结局尚未解锁');
+  } finally {
+    choiceInFlight = false;
+  }
 }
 
 // ============================================================
@@ -971,7 +1080,7 @@ renderNode = async function(data) {
   _renderNode_original(data);
 
   // 结局总结 — 渲染到正文下方
-  if (data.is_ending) {
+  if (data.is_ending && !data.bonus_ending) {
     const summary = await showEndingSummary(data);
     const storyEl = document.querySelector('.story-text');
     if (storyEl) {
@@ -1051,7 +1160,32 @@ document.addEventListener('keydown', event => {
 applyPreferences();
 updateAudioButton();
 initParticles();
-showMainMenu();
+async function restoreSession() {
+  try {
+    const data = await api('/api/state');
+    if (data.trait) {
+      renderNode(data);
+      return;
+    }
+  } catch {
+    // 服务端没有可恢复的当前局，展示主菜单即可。
+  }
+  showMainMenu();
+}
+
+restoreSession();
+
+window.addEventListener('pagehide', () => {
+  if (!currentNode || isEnding) return;
+  try {
+    fetch(`${API}/api/save`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: SID }),
+      keepalive: true,
+    });
+  } catch {}
+});
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

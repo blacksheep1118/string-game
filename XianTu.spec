@@ -12,6 +12,7 @@ a = Analysis(
     ],
     hiddenimports=[
         'game', 'save_manager', 'story_tools', 'theme_tokens', 'playability',
+        'achievement_system',
         'xiantu', 'xiantu.config', 'xiantu.engine', 'xiantu.story', 'xiantu.terminal',
         'tkinter',
     ],

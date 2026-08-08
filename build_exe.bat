@@ -1,4 +1,6 @@
 @echo off
+setlocal
+cd /d "%~dp0"
 title Build XianTu EXE
 
 echo.
@@ -7,12 +9,20 @@ echo   Building XianTu Standalone EXE
 echo ========================================
 echo.
 
-python -c "import PyInstaller" 2>nul || pip install pyinstaller -q
+python -m pip install -r requirements-build.txt -q
+if errorlevel 1 (
+  echo [ERROR] Could not install build dependencies.
+  exit /b 1
+)
 
 echo [*] Building...
 echo.
 
-pyinstaller --noconfirm XianTu.spec
+python -m PyInstaller --noconfirm XianTu.spec
+if errorlevel 1 (
+  echo [ERROR] PyInstaller build failed.
+  exit /b 1
+)
 
 echo.
 echo ========================================

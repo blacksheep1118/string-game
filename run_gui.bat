@@ -1,2 +1,3 @@
 @echo off
-start "" pythonw run_gui.pyw
+cd /d "%~dp0"
+start "" pythonw "%~dp0run_gui.pyw"
