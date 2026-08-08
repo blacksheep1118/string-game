@@ -1,9 +1,10 @@
-const CACHE_NAME = 'xiantu-v4';
+const CACHE_NAME = 'xiantu-v5';
 const CORE_ASSETS = [
   '/',
   '/index.html',
   '/style.css',
   '/app.js',
+  '/js/animations.js',
   '/manifest.json',
   '/assets/icon.svg',
 ];

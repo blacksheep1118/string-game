@@ -51,6 +51,10 @@ class StoryIntegrityTest(unittest.TestCase):
         self.assertEqual(all_endings["trigger"]["count"], len(endings))
         pill_true = next(a for a in achievements if a.get("id") == "pill_true_ending")
         self.assertEqual(pill_true["trigger"]["ending"], "end_pill_saint")
+        perfect_start = next(a for a in achievements if a.get("id") == "perfect_start")
+        self.assertIn(str(perfect_start["trigger"]["value"]), perfect_start["desc"])
+        explorer = next(a for a in achievements if a.get("id") == "explorer")
+        self.assertIn(str(explorer["trigger"]["min"]), explorer["desc"])
 
     def test_graph_quality_helpers(self):
         nodes = {

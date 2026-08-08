@@ -229,7 +229,7 @@ async function playMiniGame(action) {
   });
   try {
     const data = await api('/api/mini_game', { action });
-    renderNode(data);
+    await renderNode(data);
     (data.achievements || []).forEach((ach, i) => {
       setTimeout(() => showAchievementPopup(ach), i * 500);
     });
@@ -318,7 +318,7 @@ function renderNode(data) {
   if (data.is_ending) {
     html += `<div class="choices">`;
     html += `<button class="choice-btn" onclick="restartGame()"><span class="idx">1</span>重新开始</button>`;
-    html += `<button class="choice-btn" onclick="showStartScreen()"><span class="idx">2</span>返回主菜单</button>`;
+    html += `<button class="choice-btn" onclick="showMainMenu()"><span class="idx">2</span>返回主菜单</button>`;
     html += `</div>`;
   } else if (data.choices && data.choices.length > 0) {
     html += `<div class="choices">`;
@@ -347,7 +347,7 @@ async function makeChoice(idx) {
   });
   try {
     const data = await api('/api/choice', { choice: idx });
-    renderNode(data);
+    await renderNode(data);
 
     // 显示新解锁的成就
     if (data.achievements && data.achievements.length > 0) {
@@ -470,7 +470,7 @@ async function loadGame(filename) {
   resetAutoSave();
   try {
     const data = await api('/api/load', { filename });
-    renderNode(data);
+    await renderNode(data);
     toast('存档已加载');
   } catch (err) {
     toast(err.message || '读取失败');
@@ -514,7 +514,7 @@ async function quickRestart() {
   resetAutoSave();
   try {
     const data = await api('/api/quick_restart');
-    renderNode(data);
+    await renderNode(data);
     (data.achievements || []).forEach((ach, i) => {
       setTimeout(() => showAchievementPopup(ach), i * 500);
     });
@@ -757,7 +757,7 @@ function showTraitSelection(attrs) {
   document.getElementById('confirm-trait-btn').addEventListener('click', async () => {
     try {
       const data = await api('/api/set_attrs', { attrs, trait: selectedTrait });
-      renderNode(data);
+      await renderNode(data);
       (data.achievements || []).forEach((ach, i) => {
         setTimeout(() => showAchievementPopup(ach), i * 500);
       });
@@ -1053,7 +1053,7 @@ async function unlockBonusEnding() {
   choiceInFlight = true;
   try {
     const data = await api('/api/bonus_ending');
-    renderNode(data);
+    await renderNode(data);
     (data.achievements || []).forEach((ach, i) => {
       setTimeout(() => showAchievementPopup(ach), i * 500);
     });
@@ -1164,7 +1164,7 @@ async function restoreSession() {
   try {
     const data = await api('/api/state');
     if (data.trait) {
-      renderNode(data);
+      await renderNode(data);
       return;
     }
   } catch {

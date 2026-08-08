@@ -20,6 +20,15 @@ class StaticAssetsTest(unittest.TestCase):
         self.assertEqual(manifest["short_name"], "仙途")
         self.assertTrue(manifest["icons"])
 
+    def test_service_worker_caches_all_local_javascript_entrypoints(self):
+        worker = (BASE_DIR / "static" / "service-worker.js").read_text(encoding="utf-8")
+        self.assertIn("'/app.js'", worker)
+        self.assertIn("'/js/animations.js'", worker)
+
+    def test_frontend_does_not_reference_removed_start_screen_handler(self):
+        app_js = (BASE_DIR / "static" / "app.js").read_text(encoding="utf-8")
+        self.assertNotIn("showStartScreen", app_js)
+
 
 if __name__ == "__main__":
     unittest.main()

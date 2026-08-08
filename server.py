@@ -265,7 +265,9 @@ def api_state():
     sid = data.get("session_id", "default")
     g = games.get(sid)
     if not g:
-        return error_response("no game", "no_game")
+        # 首次打开 Web 页面时，前端会探测是否存在可恢复的当前局。
+        # “还没有当前局”是正常状态，不应让浏览器控制台出现 400 错误。
+        return jsonify({"ok": True, "state": "need_new_game", "node_id": "start", "trait": ""})
     touch_session(sid)
     return jsonify(get_node_data(g))
 
@@ -333,23 +335,26 @@ def api_saves():
 
 @app.route("/api/load", methods=["POST"])
 def api_load():
-    cleanup_sessions()
     data = request.get_json() or {}
     sid = data.get("session_id", "default")
     filename = data.get("filename", "")
 
-    try:
-        d = load_save(SAVE_DIR, filename)
-        d = validate_save_payload(d, NODES, ATTR_NAMES)
-    except FileNotFoundError:
-        return error_response("存档不存在", "save_not_found")
-    except (OSError, json.JSONDecodeError, ValueError) as exc:
-        return error_response(str(exc) or "存档格式错误", "invalid_save")
+    with GAME_LOCK:
+        cleanup_sessions()
+        if sid not in games and len(games) >= MAX_SESSIONS:
+            return error_response("当前在线游戏数量已达上限", "session_limit", 429)
+        try:
+            d = load_save(SAVE_DIR, filename)
+            d = validate_save_payload(d, NODES, ATTR_NAMES)
+        except FileNotFoundError:
+            return error_response("存档不存在", "save_not_found")
+        except (OSError, json.JSONDecodeError, ValueError) as exc:
+            return error_response(str(exc) or "存档格式错误", "invalid_save")
 
-    g = Game()
-    g.load_data(d)
-    games[sid] = g
-    touch_session(sid)
+        g = Game()
+        g.load_data(d)
+        games[sid] = g
+        touch_session(sid)
 
     return jsonify(get_node_data(g))
 

@@ -128,7 +128,7 @@
     {
       "id": "perfect_start",
       "name": "完美开局",
-      "desc": "选择词条后所有属性≥30",
+      "desc": "选择词条后所有属性≥20",
       "icon": "✨",
       "category": "属性",
       "trigger": {
@@ -233,7 +233,7 @@
     {
       "id": "explorer",
       "name": "探索者",
-      "desc": "60步以上达成结局",
+      "desc": "25步以上达成结局",
       "icon": "🗺️",
       "category": "挑战",
       "trigger": {
@@ -306,7 +306,7 @@
     {
       "id": "artifact_collector",
       "name": "法宝收藏家",
-      "desc": "单局获得3个以上法宝",
+      "desc": "累计获得3个以上法宝",
       "icon": "🏺",
       "category": "收集",
       "trigger": {

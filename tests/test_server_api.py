@@ -69,6 +69,24 @@ class ServerApiTest(unittest.TestCase):
             finally:
                 response.close()
 
+    def test_state_probe_without_current_game_is_normal_empty_state(self):
+        response = self.client.post("/api/state", json={"session_id": "new-browser"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["state"], "need_new_game")
+
+    def test_load_does_not_bypass_session_limit(self):
+        old_limit = server.MAX_SESSIONS
+        server.MAX_SESSIONS = 0
+        try:
+            response = self.client.post("/api/load", json={
+                "session_id": "new-load-session",
+                "filename": "save_missing.json",
+            })
+        finally:
+            server.MAX_SESSIONS = old_limit
+        self.assertEqual(response.status_code, 429)
+        self.assertEqual(response.get_json()["code"], "session_limit")
+
     def test_choice_returns_feedback_and_resources(self):
         self.client.post("/api/new_game", json={"session_id": "t"})
         self.client.post("/api/set_attrs", json={
