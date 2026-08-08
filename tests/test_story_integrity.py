@@ -4,7 +4,14 @@ import unittest
 
 from game import ATTR_NAMES, Game, NODES
 from save_manager import load_save, save_game, validate_save_payload
-from story_tools import validate_nodes
+from story_tools import (
+    duplicate_destinations,
+    ending_nodes,
+    graph_quality,
+    placeholder_nodes,
+    reachable_nodes,
+    validate_nodes,
+)
 
 
 class StoryIntegrityTest(unittest.TestCase):
@@ -15,7 +22,30 @@ class StoryIntegrityTest(unittest.TestCase):
         errors = validate_nodes({"start": {"title": "t", "text": "x", "choices": ["bad"]}}, ATTR_NAMES)
         self.assertIn("start.choices[0]: 必须是对象", errors)
 
-    def test_save_roundtrip_uses_schema_version(self):
+    def test_graph_quality_helpers(self):
+        nodes = {
+            "start": {
+                "title": "t",
+                "text": "x",
+                "choices": [
+                    {"text": "a", "next": "end"},
+                    {"text": "b", "next": "end"},
+                ],
+            },
+            "end": {"title": "e", "text": "done", "choices": []},
+            "orphan": {"title": "o", "text": "unused", "choices": []},
+        }
+        self.assertEqual(reachable_nodes(nodes), {"start", "end"})
+        self.assertEqual(ending_nodes(nodes), {"end", "orphan"})
+        self.assertEqual(placeholder_nodes(nodes), [])
+        self.assertEqual(
+            duplicate_destinations(nodes),
+            [{"node": "start", "target": "end", "choices": [0, 1]}],
+        )
+        quality = graph_quality(nodes)
+        self.assertEqual(quality["unreachable"], ["orphan"])
+        self.assertEqual(quality["endings"], ["end", "orphan"])
+
         with tempfile.TemporaryDirectory() as tmp:
             game = Game()
             game.player_name = "测试"

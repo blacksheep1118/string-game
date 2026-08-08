@@ -58,6 +58,68 @@ def validate_nodes(
     return errors
 
 
+def reachable_nodes(nodes: dict[str, dict[str, Any]], start: str = "start") -> set[str]:
+    """Return nodes reachable through both successful and failed choices."""
+    if start not in nodes:
+        return set()
+    reached = {start}
+    pending = [start]
+    while pending:
+        node_id = pending.pop()
+        for choice in nodes.get(node_id, {}).get("choices", []):
+            if not isinstance(choice, dict):
+                continue
+            for key in ("next", "fail"):
+                target = choice.get(key)
+                if target in nodes and target not in reached:
+                    reached.add(target)
+                    pending.append(target)
+    return reached
+
+
+def ending_nodes(nodes: dict[str, dict[str, Any]]) -> set[str]:
+    """Return terminal story nodes with no choices."""
+    return {node_id for node_id, node in nodes.items() if not node.get("choices", [])}
+
+
+def placeholder_nodes(nodes: dict[str, dict[str, Any]]) -> list[str]:
+    """Find obvious placeholder or intentionally missing story content."""
+    markers = ("缺失节点", "此节点不可达", "TODO", "待补")
+    return sorted(
+        node_id
+        for node_id, node in nodes.items()
+        if any(marker in f"{node.get('title', '')} {node.get('text', '')}" for marker in markers)
+    )
+
+
+def duplicate_destinations(nodes: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    """Report choices in one node that share the same successful destination."""
+    duplicates = []
+    for node_id, node in nodes.items():
+        destinations: dict[str, list[int]] = {}
+        for index, choice in enumerate(node.get("choices", [])):
+            if not isinstance(choice, dict) or not choice.get("next"):
+                continue
+            destinations.setdefault(choice["next"], []).append(index)
+        for target, indexes in destinations.items():
+            if len(indexes) > 1:
+                duplicates.append({"node": node_id, "target": target, "choices": indexes})
+    return duplicates
+
+
+def graph_quality(nodes: dict[str, dict[str, Any]], start: str = "start") -> dict[str, Any]:
+    """Summarize reachability and common content-quality hazards."""
+    reached = reachable_nodes(nodes, start)
+    return {
+        "nodes": len(nodes),
+        "reachable": len(reached),
+        "unreachable": sorted(set(nodes) - reached),
+        "endings": sorted(ending_nodes(nodes)),
+        "placeholders": placeholder_nodes(nodes),
+        "duplicate_destinations": duplicate_destinations(nodes),
+    }
+
+
 def export_nodes(nodes: dict[str, dict[str, Any]], output_path: str) -> None:
     output_dir = os.path.dirname(output_path)
     if output_dir:
@@ -76,7 +138,7 @@ def load_external_nodes(path: str) -> dict[str, dict[str, Any]]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="剧情节点校验/导出工具")
-    parser.add_argument("command", choices=["validate", "export"])
+    parser.add_argument("command", choices=["validate", "export", "quality"])
     parser.add_argument("--output", default=os.path.join("data", "story_nodes.json"))
     args = parser.parse_args()
 
@@ -91,6 +153,17 @@ def main() -> int:
     if args.command == "export":
         export_nodes(NODES, args.output)
         print(f"已导出剧情节点: {args.output}")
+    elif args.command == "quality":
+        quality = graph_quality(NODES)
+        print(json.dumps({
+            "nodes": quality["nodes"],
+            "reachable": quality["reachable"],
+            "unreachable_count": len(quality["unreachable"]),
+            "unreachable": quality["unreachable"],
+            "ending_count": len(quality["endings"]),
+            "placeholders": quality["placeholders"],
+            "duplicate_destinations": quality["duplicate_destinations"],
+        }, ensure_ascii=False, indent=2))
     else:
         print(f"剧情节点校验通过，共 {len(NODES)} 个节点。")
     return 0

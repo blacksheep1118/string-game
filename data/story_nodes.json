@@ -79,6 +79,22 @@
         "effect": {
           "悟性": 3
         }
+      },
+      {
+        "text": "追查妖兽背后的猎妖组织",
+        "next": "ch5_kill_1",
+        "require": {
+          "精神": 24
+        },
+        "fail": "sword_kill"
+      },
+      {
+        "text": "以肉身守护战场百姓",
+        "next": "ch5_body_1",
+        "require": {
+          "根骨": 25
+        },
+        "fail": "sword_body"
       }
     ]
   },
@@ -233,7 +249,7 @@
     "choices": [
       {
         "text": "抓住机缘，拜入宗门",
-        "next": "ch3_sect_1",
+        "next": "ch2_bandits_1",
         "require": {
           "魅力": 20
         },
@@ -265,7 +281,7 @@
     "choices": [
       {
         "text": "支持掌门，维护宗门正统",
-        "next": "sect_leader"
+        "next": "join_sect"
       },
       {
         "text": "两不相帮，专注修炼",
@@ -561,8 +577,31 @@
     "text": "你停下修炼，花三年时间调养丹毒、稳固根基。\n同门都笑你胆小，但你知道自己在做什么。\n\n三年后，你重新炼丹。这一次的火候掌控，与三年前天壤之别。\n",
     "choices": [
       {
-        "text": "继续丹道修行，稳步前行",
+        "text": "继续修习丹道，稳步前行",
         "next": "end_solid"
+      },
+      {
+        "text": "进入药王谷，继承完整丹脉",
+        "next": "pill_valley",
+        "require": {
+          "悟性": 25
+        },
+        "fail": "end_solid",
+        "effect": {
+          "丹药": 1
+        }
+      },
+      {
+        "text": "留在民间，以丹术救治百姓",
+        "next": "pill_folk",
+        "require": {
+          "魅力": 25
+        },
+        "fail": "end_solid",
+        "effect": {
+          "丹药": 1,
+          "魅力": 1
+        }
       },
       {
         "text": "将丹道与武道结合，开创新路",
@@ -688,7 +727,7 @@
     "choices": [
       {
         "text": "继续保持中立立场",
-        "next": "sect_neutral_expand_1",
+        "next": "ch5_sect_neutral_1",
         "effect": {
           "精神": 2
         }

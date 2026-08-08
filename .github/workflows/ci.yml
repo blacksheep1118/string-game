@@ -18,5 +18,7 @@ jobs:
         run: python -m compileall -q .
       - name: Story validation
         run: python story_tools.py validate
+      - name: Story quality report
+        run: python story_tools.py quality
       - name: Unit tests
         run: python -m unittest discover -s tests
